@@ -32,6 +32,7 @@ from scholar_cite.citation import (
     fetch_citation_set,
 )
 from scholar_cite.models import ALL_FORMATS, Paper
+from scholar_cite.ranking import rank_papers
 
 SCHOLAR_SEARCH_URL = "https://scholar.google.com/scholar?hl=en&q={query}"
 
@@ -64,6 +65,7 @@ def _paper_from_scholarly_pub(pub: dict) -> Paper | None:
         authors=authors_list,
         year=year,
         venue=str(bib.get("venue", "")).strip(),
+        source_url=str(pub.get("pub_url") or ""),
     )
 
 
@@ -93,14 +95,21 @@ def _is_scholar_blocked(exc: BaseException) -> bool:
 
 
 def _search_via_scholarly(query: str, limit: int) -> list[Paper]:
+    """Search via scholarly, then re-rank by source quality before truncating.
+
+    We pull 2x the requested limit (capped at 10, Scholar's first page) so
+    ranking has enough candidates to reshuffle before the cut.
+    """
     from scholarly import scholarly  # lazy
 
+    pool = max(limit * 2, limit + 3)
+    pool = min(pool, 10)  # Scholar's first result page
     papers: list[Paper] = []
-    for pub in islice(scholarly.search_pubs(query), limit):
+    for pub in islice(scholarly.search_pubs(query), pool):
         p = _paper_from_scholarly_pub(pub)
         if p is not None:
             papers.append(p)
-    return papers
+    return rank_papers(papers)[:limit]
 
 
 def _fill_via_scholarly(papers: list[Paper]) -> None:
@@ -141,10 +150,12 @@ def _parse_search_page(html: str) -> list[Paper]:
     papers: list[Paper] = []
 
     for row in soup.select("div.gs_r.gs_or.gs_scl, div.gs_r.gs_or"):
-        title_el = row.select_one("h3.gs_rt a") or row.select_one("h3.gs_rt")
+        title_a = row.select_one("h3.gs_rt a")
+        title_el = title_a or row.select_one("h3.gs_rt")
         if not title_el:
             continue
         title = title_el.get_text(" ", strip=True)
+        source_url = (title_a.get("href") or "") if title_a else ""
         gs_a = row.select_one("div.gs_a")
         authors: list[str] = []
         year: int | None = None
@@ -183,6 +194,7 @@ def _parse_search_page(html: str) -> list[Paper]:
                 authors=authors,
                 year=year,
                 venue=venue,
+                source_url=source_url,
             )
         )
 
@@ -195,8 +207,13 @@ def _search_via_browser(query: str, limit: int) -> list[Paper]:
     with BrowserFetcher(headless=False) as bf:
         print("[browser] fetching search page…", file=sys.stderr)
         search_html = bf.fetch(url, timeout=45.0, settle_ms=800)
-        papers = _parse_search_page(search_html)[:limit]
-        print(f"[browser] parsed {len(papers)} result(s); fetching citations…", file=sys.stderr)
+        all_papers = _parse_search_page(search_html)
+        papers = rank_papers(all_papers)[:limit]
+        print(
+            f"[browser] parsed {len(all_papers)} result(s), kept top {len(papers)} "
+            f"after source-quality ranking; fetching citations…",
+            file=sys.stderr,
+        )
 
         def fetch(u: str, timeout: float = 30.0) -> str:
             if "scholar.googleusercontent.com" in u or u.endswith(

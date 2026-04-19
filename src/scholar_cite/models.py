@@ -41,6 +41,10 @@ class Paper:
     year: int | None = None
     venue: str = ""
     doi: str | None = None
+    # URL the title link points at on the Scholar results page. Used to rank
+    # candidate clusters by the quality of their primary source (CVF / ACL / IEEE
+    # / arXiv are trusted; random aggregator hosts are demoted).
+    source_url: str = ""
     citations: CitationSet = field(default_factory=CitationSet)
     # Per-format fetch errors, keyed by format name. Present → that format failed
     # and the corresponding CitationSet field is empty. Absent → either the format
