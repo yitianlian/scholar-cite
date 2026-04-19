@@ -46,15 +46,47 @@ scholar-cite cite "Attention Is All You Need" --format bibtex
 
 ## Install
 
+Pick one of three options, then run `playwright install chromium` once (it
+downloads a ~150 MB browser binary the tool needs).
+
+### Option A — `pipx` (recommended, isolates the install)
+
 ```bash
-git clone https://github.com/yitianlian/scholar-cite
-cd scholar-cite
+pipx install scholar-cite              # from PyPI (once published)
+# or, directly from the private git repo while it lives there:
+pipx install git+ssh://git@github.com/yitianlian/scholar-cite.git
+playwright install chromium
+```
+
+### Option B — `pip install` from a wheel
+
+```bash
+# Build locally:
+git clone https://github.com/yitianlian/scholar-cite && cd scholar-cite
+python -m build                        # produces dist/scholar_cite-0.1.0-*.whl
+
+# Install the wheel into any Python 3.10+ environment:
+pip install dist/scholar_cite-0.1.0-py3-none-any.whl
+playwright install chromium
+```
+
+### Option C — editable install for development
+
+```bash
+git clone https://github.com/yitianlian/scholar-cite && cd scholar-cite
 python3 -m venv .venv && source .venv/bin/activate
-pip install -e .
-playwright install chromium           # ~150 MB, one-time
+pip install -e ".[dev]"                # includes pytest + ruff
+playwright install chromium
+pytest -q                              # 38 tests, no live Scholar calls
 ```
 
 Python 3.10 or later is required (tested on 3.10 – 3.14).
+
+### First-run note (all options)
+
+The tool opens a visible Chromium window on first use. If Scholar asks "Please
+show you're not a robot", click through the challenge once. Cookies are cached
+at `~/.cache/scholar-cite/cookies.json` and silently reused for days afterwards.
 
 ## Quick start
 
@@ -66,9 +98,7 @@ scholar-cite cite "Attention Is All You Need"
 scholar-cite cite "Attention Is All You Need" --format all
 ```
 
-A Chromium window pops up on the first run. If Scholar asks "Please show
-you're not a robot", click through the challenge once — cookies are cached at
-`~/.cache/scholar-cite/cookies.json` and silently reused on later runs.
+See [install](#install) above — the first-run captcha note applies.
 
 ## Usage
 
@@ -258,7 +288,8 @@ scholar-cite/
 | --- | ---------------------- |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Module map, one-query lifecycle, exception policy, cache layout |
 | [`docs/design.md`](docs/design.md) | Original 14-section design specification (planning-era snapshot) |
-| [`docs/test-run-2026-04-19.md`](docs/test-run-2026-04-19.md) | Live end-to-end evidence for the 9-format pipeline |
+| [`docs/test-run-2026-04-19.md`](docs/test-run-2026-04-19.md) | First live 9-format pipeline run |
+| [`docs/e2e-verification.md`](docs/e2e-verification.md) | Post-fix E2E evidence + wheel install smoke test |
 | [`CHANGELOG.md`](CHANGELOG.md) | Release-level summary of what changed and why |
 
 ## License

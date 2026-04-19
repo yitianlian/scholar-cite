@@ -35,6 +35,13 @@ project adheres to [Semantic Versioning](https://semver.org/).
 - 7 new regression tests (38 total, up from 31) covering each of the three
   review findings and two adjacent cases (real bugs still propagate; strict
   still writes output when the result is complete).
+- `docs/e2e-verification.md` — live end-to-end evidence after the fixes,
+  including a wheel install smoke test in a clean venv.
+- README install section rewritten with three options (`pipx` from git,
+  `pip install` from wheel, editable dev install) and a first-run captcha
+  note.
+- `.gitignore` now excludes `dist/`, `build/`, `wheels/`, `*.whl`, `*.tar.gz`
+  so build artefacts don't accidentally get committed.
 
 ### Changed
 - Code formatted with `ruff format` and lint-clean under the new ruff ruleset

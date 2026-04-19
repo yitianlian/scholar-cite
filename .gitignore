@@ -6,6 +6,9 @@ __pycache__/
 .eggs/
 build/
 dist/
+wheels/
+*.whl
+*.tar.gz
 .venv/
 venv/
 env/
