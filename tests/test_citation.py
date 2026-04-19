@@ -1,4 +1,5 @@
 """Parser-level tests that don't hit Google Scholar."""
+
 from __future__ import annotations
 
 from pathlib import Path

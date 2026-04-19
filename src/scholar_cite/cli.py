@@ -1,9 +1,9 @@
 """Typer CLI for scholar-cite."""
+
 from __future__ import annotations
 
 import json
 import sys
-from typing import Optional
 
 import typer
 
@@ -95,9 +95,7 @@ def _summarize_missing(papers: list[Paper], formats: list[str]) -> list[str]:
     for i, p in enumerate(papers, 1):
         missing = p.missing_formats(formats)
         if missing:
-            issues.append(
-                f"[{i}] {p.cluster_id}: missing {', '.join(missing)}"
-            )
+            issues.append(f"[{i}] {p.cluster_id}: missing {', '.join(missing)}")
     return issues
 
 
@@ -105,22 +103,26 @@ def _summarize_missing(papers: list[Paper], formats: list[str]) -> list[str]:
 def cite(
     query: str = typer.Argument(..., help="Paper title to search on Google Scholar."),
     format: str = typer.Option(
-        "bibtex", "--format", "-F",
+        "bibtex",
+        "--format",
+        "-F",
         help="Comma-separated formats or 'all'. Options: mla, apa, chicago, harvard, "
-             "vancouver, bibtex, endnote, refman, refworks.",
+        "vancouver, bibtex, endnote, refman, refworks.",
     ),
     limit: int = typer.Option(10, "--limit", "-n", help="Max candidates to return."),
     as_json: bool = typer.Option(False, "--json", help="Output JSON."),
-    output: Optional[str] = typer.Option(None, "--output", "-o", help="Write output to file."),
+    output: str | None = typer.Option(None, "--output", "-o", help="Write output to file."),
     no_browser: bool = typer.Option(
-        False, "--no-browser",
+        False,
+        "--no-browser",
         help="Skip the Playwright browser path. Uses the scholarly HTTP backend only. "
-             "Faster when it works, but Scholar frequently blocks it — no silent fallback.",
+        "Faster when it works, but Scholar frequently blocks it — no silent fallback.",
     ),
     strict: bool = typer.Option(
-        False, "--strict",
+        False,
+        "--strict",
         help="Exit non-zero (code 4) if ANY requested citation format is missing. "
-             "By default, missing formats are reported but the command still exits 0.",
+        "By default, missing formats are reported but the command still exits 0.",
     ),
 ) -> None:
     """Search Google Scholar and print citation formats.

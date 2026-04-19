@@ -1,4 +1,5 @@
 """Source-quality ranking tests."""
+
 from __future__ import annotations
 
 from scholar_cite.models import Paper

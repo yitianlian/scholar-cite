@@ -5,11 +5,38 @@ build-backend = "hatchling.build"
 [project]
 name = "scholar-cite"
 version = "0.1.0"
-description = "CLI to fetch all 9 Google Scholar citation formats by paper title"
+description = "CLI that fetches all 9 Google Scholar citation formats (BibTeX / EndNote / RefMan / RefWorks / MLA / APA / Chicago / Harvard / Vancouver) for a paper title."
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "MIT" }
+license = { file = "LICENSE" }
 authors = [{ name = "Touencent" }]
+keywords = [
+  "google-scholar",
+  "citation",
+  "bibtex",
+  "endnote",
+  "ris",
+  "cli",
+  "academic",
+  "bibliography",
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: MacOS",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Scientific/Engineering",
+  "Topic :: Text Processing",
+  "Topic :: Utilities",
+]
 dependencies = [
   "typer>=0.12",
   "scholarly>=1.7",
@@ -22,12 +49,40 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pytest>=8", "ruff>=0.4"]
 
+[project.urls]
+Homepage = "https://github.com/yitianlian/scholar-cite"
+Repository = "https://github.com/yitianlian/scholar-cite"
+Issues = "https://github.com/yitianlian/scholar-cite/issues"
+
 [project.scripts]
 scholar-cite = "scholar_cite.cli:app"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/scholar_cite"]
 
+[tool.hatch.build.targets.sdist]
+include = [
+  "src/scholar_cite",
+  "tests",
+  "docs",
+  "examples",
+  "README.md",
+  "LICENSE",
+  "CHANGELOG.md",
+  "pyproject.toml",
+]
+
 [tool.ruff]
 line-length = 100
 target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF"]
+ignore = [
+  "E501",  # line-too-long: formatter handles it
+  "B008",  # Typer uses typer.Option(...) defaults — intentional
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"

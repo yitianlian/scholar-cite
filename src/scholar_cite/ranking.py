@@ -11,6 +11,7 @@ We keep a small allow/deny list of hostnames with explicit scores. Everything
 unlisted gets a neutral 0. Sorting is stable: within the same tier, Scholar's
 original result order is preserved.
 """
+
 from __future__ import annotations
 
 from urllib.parse import urlparse
@@ -63,7 +64,7 @@ def source_score(paper: Paper) -> int:
 def _hostname(url: str) -> str:
     try:
         return (urlparse(url).hostname or "").lower()
-    except Exception:  # noqa: BLE001 — malformed URL → treat as unknown
+    except Exception:
         return ""
 
 

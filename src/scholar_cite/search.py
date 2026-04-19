@@ -16,6 +16,7 @@ Two paths:
 Non-blocking bugs (parser errors, type errors, etc.) always propagate — they
 should not be misinterpreted as "Scholar is rate-limiting us".
 """
+
 from __future__ import annotations
 
 import re
@@ -89,9 +90,7 @@ def _is_scholar_blocked(exc: BaseException) -> bool:
         if status in (403, 429, 503):
             return True
     msg = str(exc)
-    if "403" in msg or "429" in msg or "MaxTries" in msg or "captcha" in msg.lower():
-        return True
-    return False
+    return "403" in msg or "429" in msg or "MaxTries" in msg or "captcha" in msg.lower()
 
 
 def _search_via_scholarly(query: str, limit: int) -> list[Paper]:
@@ -117,7 +116,7 @@ def _fill_via_scholarly(papers: list[Paper]) -> None:
 
     nav = Navigator()
 
-    def fetch(url: str, timeout: float = 20.0) -> str:  # noqa: ARG001
+    def fetch(url: str, timeout: float = 20.0) -> str:
         text = nav._get_page(url)
         if not isinstance(text, str):
             raise RuntimeError(f"Unexpected response type: {type(text)}")
@@ -128,7 +127,7 @@ def _fill_via_scholarly(papers: list[Paper]) -> None:
             paper.citations, paper.citation_errors = fetch_citation_set(
                 paper.cluster_id, fetch=fetch
             )
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             if _is_scholar_blocked(e):
                 # Record it as a blocked-by-Scholar state; caller decides policy.
                 for name in ALL_FORMATS:
@@ -216,9 +215,7 @@ def _search_via_browser(query: str, limit: int) -> list[Paper]:
         )
 
         def fetch(u: str, timeout: float = 30.0) -> str:
-            if "scholar.googleusercontent.com" in u or u.endswith(
-                (".bib", ".enw", ".ris", ".rfw")
-            ):
+            if "scholar.googleusercontent.com" in u or u.endswith((".bib", ".enw", ".ris", ".rfw")):
                 return bf.fetch_api(u, timeout=timeout)
             return bf.fetch(u, timeout=timeout, settle_ms=600)
 

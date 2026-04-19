@@ -4,13 +4,27 @@ from dataclasses import dataclass, field
 from typing import Literal
 
 FormatName = Literal[
-    "mla", "apa", "chicago", "harvard", "vancouver",
-    "bibtex", "endnote", "refman", "refworks",
+    "mla",
+    "apa",
+    "chicago",
+    "harvard",
+    "vancouver",
+    "bibtex",
+    "endnote",
+    "refman",
+    "refworks",
 ]
 
 ALL_FORMATS: tuple[FormatName, ...] = (
-    "mla", "apa", "chicago", "harvard", "vancouver",
-    "bibtex", "endnote", "refman", "refworks",
+    "mla",
+    "apa",
+    "chicago",
+    "harvard",
+    "vancouver",
+    "bibtex",
+    "endnote",
+    "refman",
+    "refworks",
 )
 
 TEXT_FORMATS: tuple[FormatName, ...] = ("mla", "apa", "chicago", "harvard", "vancouver")

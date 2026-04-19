@@ -1,4 +1,5 @@
 """CLI behaviour tests — missing-format surfacing and exit codes."""
+
 from __future__ import annotations
 
 from typer.testing import CliRunner
@@ -33,7 +34,16 @@ def test_render_plain_shows_missing_markers():
 
     assert "Doe, J. Test Paper" in text  # the one that succeeded
     # Every missing format must appear with a MISSING marker + reason.
-    for fmt in ("apa", "chicago", "harvard", "vancouver", "bibtex", "endnote", "refman", "refworks"):
+    for fmt in (
+        "apa",
+        "chicago",
+        "harvard",
+        "vancouver",
+        "bibtex",
+        "endnote",
+        "refman",
+        "refworks",
+    ):
         label = cli._fmt_label(fmt)
         assert f"{label:<9} [MISSING:" in text or f"{label}:" in text or "[MISSING:" in text
     # Reason substrings propagated.

@@ -1,4 +1,5 @@
 """Parse Scholar's cite popup HTML and fetch the 4 export formats."""
+
 from __future__ import annotations
 
 import re
@@ -16,10 +17,10 @@ class PageFetcher(Protocol):
 
     def __call__(self, url: str, timeout: float = ...) -> str: ...
 
+
 SCHOLAR_BASE = "https://scholar.google.com"
 CITE_URL_TEMPLATE = (
-    SCHOLAR_BASE
-    + "/scholar?q=info:{cluster_id}:scholar.google.com/&output=cite&scirp=0&hl=en"
+    SCHOLAR_BASE + "/scholar?q=info:{cluster_id}:scholar.google.com/&output=cite&scirp=0&hl=en"
 )
 
 # Scholar's cite popup text-format order; maps anchor label → our CitationSet field.
@@ -67,7 +68,9 @@ def _looks_like_captcha(html: str) -> bool:
     return any(m in html for m in markers)
 
 
-def parse_cite_html(html: str, base_url: str = SCHOLAR_BASE) -> tuple[CitationSet, list[_ExportLink]]:
+def parse_cite_html(
+    html: str, base_url: str = SCHOLAR_BASE
+) -> tuple[CitationSet, list[_ExportLink]]:
     """Extract the 5 text formats and the 4 export links from Scholar's cite popup HTML.
 
     Returns (CitationSet with text fields filled, list of export links still to fetch).
@@ -99,7 +102,7 @@ def parse_cite_html(html: str, base_url: str = SCHOLAR_BASE) -> tuple[CitationSe
     if rows_found == 0:
         labels = soup.find_all(class_="gs_cith")
         values = soup.find_all(class_="gs_citr")
-        for label_el, value_el in zip(labels, values):
+        for label_el, value_el in zip(labels, values, strict=False):
             field = _TEXT_LABEL_MAP.get(label_el.get_text(strip=True))
             if field:
                 setattr(citations, field, value_el.get_text(" ", strip=True))
@@ -182,15 +185,13 @@ def fetch_citation_set(
             errors.pop(link.field, None)
         except CaptchaError as e:
             errors[link.field] = f"captcha: {e}"
-        except Exception as e:  # noqa: BLE001 — narrow handling; still record.
+        except Exception as e:
             errors[link.field] = f"{type(e).__name__}: {e}"
 
     return citations, errors
 
 
-_REFWORKS_REDIRECT_RE = re.compile(
-    r"""location\.replace\(['"]([^'"]+)['"]\)""", re.IGNORECASE
-)
+_REFWORKS_REDIRECT_RE = re.compile(r"""location\.replace\(['"]([^'"]+)['"]\)""", re.IGNORECASE)
 
 
 def _clean_refworks(body: str) -> str:
@@ -205,12 +206,7 @@ def _clean_refworks(body: str) -> str:
     m = _REFWORKS_REDIRECT_RE.search(body)
     if not m:
         return body
-    url = (
-        m.group(1)
-        .replace(r"\x3d", "=")
-        .replace(r"\x26", "&")
-        .replace(r"\x2f", "/")
-    )
+    url = m.group(1).replace(r"\x3d", "=").replace(r"\x26", "&").replace(r"\x2f", "/")
     return f"# Google Scholar's RefWorks export is an external redirect.\n# Import URL:\n{url}"
 
 

@@ -4,6 +4,7 @@ Covers the review findings that `search()` must NOT silently catch generic
 exceptions and that scholar-blocking failures must be reported per-format
 rather than hidden.
 """
+
 from __future__ import annotations
 
 import pytest

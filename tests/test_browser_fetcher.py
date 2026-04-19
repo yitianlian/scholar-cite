@@ -1,4 +1,5 @@
 """Cookie-cache robustness tests (no live browser launched)."""
+
 from __future__ import annotations
 
 import json

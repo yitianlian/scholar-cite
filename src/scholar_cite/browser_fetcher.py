@@ -16,6 +16,7 @@ Flow on first use:
     5. On shutdown, cookies are written to `~/.cache/scholar-cite/cookies.json`
        for the next invocation.
 """
+
 from __future__ import annotations
 
 import json
@@ -48,7 +49,7 @@ _ANTIBOT_MARKERS = (
     "unusual traffic from your computer",
 )
 
-_RESULT_MARKERS_SEARCH = ("id=\"gs_res_ccl\"", "gs_r gs_or", "About ")
+_RESULT_MARKERS_SEARCH = ('id="gs_res_ccl"', "gs_r gs_or", "About ")
 _RESULT_MARKERS_CITE = ("gs_citr", "gs_citi", "scholar.bib")
 
 
@@ -81,7 +82,7 @@ class BrowserFetcher:
 
     # ---------- context manager ----------
 
-    def __enter__(self) -> "BrowserFetcher":
+    def __enter__(self) -> BrowserFetcher:
         self._pw = sync_playwright().start()
         self._browser = self._pw.chromium.launch(
             headless=self._headless,
@@ -132,7 +133,12 @@ class BrowserFetcher:
         assert self._page is not None, "BrowserFetcher must be used as a context manager"
         if success_markers is None:
             success_markers = (
-                _RESULT_MARKERS_CITE if "output=cite" in url or "scholar.bib" in url or "scholar.enw" in url or "scholar.ris" in url or "scholar.rfw" in url
+                _RESULT_MARKERS_CITE
+                if "output=cite" in url
+                or "scholar.bib" in url
+                or "scholar.enw" in url
+                or "scholar.ris" in url
+                or "scholar.rfw" in url
                 else _RESULT_MARKERS_SEARCH
             )
 
@@ -150,7 +156,11 @@ class BrowserFetcher:
         # `response.text()` gives raw bytes as sent by the server, which is what we want for
         # the text/plain export endpoints. For an HTML page, we prefer the rendered DOM so
         # stealth/init scripts have applied.
-        body = self._page.content() if "text/html" in (response.headers.get("content-type") or "").lower() else response.text()
+        body = (
+            self._page.content()
+            if "text/html" in (response.headers.get("content-type") or "").lower()
+            else response.text()
+        )
 
         # Handle anti-bot / captcha interstitial
         if _page_is_antibot(body):
@@ -169,7 +179,9 @@ class BrowserFetcher:
                     print("[browser] Challenge solved. Continuing.")
                     break
             else:
-                raise RuntimeError("Timed out waiting for user to solve Scholar anti-bot challenge.")
+                raise RuntimeError(
+                    "Timed out waiting for user to solve Scholar anti-bot challenge."
+                )
 
         if settle_ms > 0:
             time.sleep(settle_ms / 1000.0)
@@ -203,7 +215,7 @@ class BrowserFetcher:
                 json.dumps({"saved_at": int(time.time()), "cookies": cookies}, ensure_ascii=False),
                 encoding="utf-8",
             )
-        except Exception:  # noqa: BLE001
+        except Exception:
             pass
 
     def _load_cookies_into(self, context: BrowserContext) -> None:
@@ -215,7 +227,7 @@ class BrowserFetcher:
             cookies = payload.get("cookies", [])
             if cookies:
                 context.add_cookies(cookies)
-        except Exception:  # noqa: BLE001
+        except Exception:
             pass
 
 

@@ -1,180 +1,267 @@
 # scholar-cite
 
-A Python CLI that searches **Google Scholar** by paper title and returns the 9 citation formats (MLA, APA, Chicago, Harvard, Vancouver, BibTeX, EndNote, RefMan, RefWorks).
+> A Python CLI that searches **Google Scholar** by paper title and returns all nine citation formats — `BibTeX`, `EndNote`, `RefMan` (RIS), `RefWorks`, `MLA`, `APA`, `Chicago`, `Harvard`, `Vancouver`.
 
-> **Status**: MVP — **all 9 formats verified end-to-end via the Playwright browser path** ([`docs/test-run-2026-04-19.md`](docs/test-run-2026-04-19.md)). Plain-HTTP path (`scholarly`) works intermittently and auto-falls-back to the browser when blocked. Full design in [`docs/design.md`](docs/design.md).
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
+[![Tests](https://img.shields.io/badge/tests-31%20passing-brightgreen.svg)](#running-the-tests)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-## Install (dev)
+**Status:** MVP. The nine formats are verified end-to-end against live Google
+Scholar via a Playwright browser backend. See
+[`docs/test-run-2026-04-19.md`](docs/test-run-2026-04-19.md) for the evidence and
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for how the code is organised.
+
+---
+
+## Table of contents
+
+1. [Why this tool exists](#why-this-tool-exists)
+2. [Install](#install)
+3. [Quick start](#quick-start)
+4. [Usage](#usage)
+5. [How it works](#how-it-works)
+6. [Missing-format handling](#missing-format-handling)
+7. [Source-quality ranking](#source-quality-ranking)
+8. [What's implemented vs planned](#whats-implemented-vs-planned)
+9. [Running the tests](#running-the-tests)
+10. [Project layout](#project-layout)
+11. [Documentation index](#documentation-index)
+12. [License](#license)
+
+---
+
+## Why this tool exists
+
+Google Scholar's "Cite" popup produces nine clean citation formats for any
+paper. Getting them in bulk is painful though: there's no public API, the HTML
+surface is rate-limited within a request or two, and export URLs serve
+`text/plain` downloads that don't play well with either `requests` or a
+headless browser. `scholar-cite` wraps all of that so you can type:
 
 ```bash
-git clone <this-repo>
-cd scholar-cite
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -e .
-playwright install chromium   # ~150MB, one-time
+scholar-cite cite "Attention Is All You Need" --format bibtex
 ```
 
-Python 3.10+ required (tested on 3.14).
+…and get a working BibTeX entry.
 
-## Usage
+## Install
 
-The default backend is **Playwright** (headful Chromium) — the only consistent
-way to get Scholar to serve 9/9 formats. The scholarly HTTP backend is
-available via `--no-browser` for users who want it, but it won't silently fall
-back — failures are reported.
+```bash
+git clone https://github.com/yitianlian/scholar-cite
+cd scholar-cite
+python3 -m venv .venv && source .venv/bin/activate
+pip install -e .
+playwright install chromium           # ~150 MB, one-time
+```
+
+Python 3.10 or later is required (tested on 3.10 – 3.14).
+
+## Quick start
 
 ```bash
 # Default: browser path, BibTeX on stdout
 scholar-cite cite "Attention Is All You Need"
 
-# All 9 formats
+# All nine formats
 scholar-cite cite "Attention Is All You Need" --format all
+```
 
-# Specific subset
-scholar-cite cite "Attention Is All You Need" --format apa,mla,bibtex
+A Chromium window pops up on the first run. If Scholar asks "Please show
+you're not a robot", click through the challenge once — cookies are cached at
+`~/.cache/scholar-cite/cookies.json` and silently reused on later runs.
 
-# Cap candidates
-scholar-cite cite "Attention Is All You Need" --limit 3
+## Usage
 
-# JSON output (includes a `citation_errors` field when any format is missing)
-scholar-cite cite "Attention Is All You Need" --format all --json
+```bash
+# Single paper → BibTeX on stdout (default format)
+scholar-cite cite "<paper title>"
 
-# Write to file
-scholar-cite cite "Attention Is All You Need" --format bibtex -o refs.bib
+# Pick the formats you want (comma-separated or 'all')
+scholar-cite cite "..." --format all
+scholar-cite cite "..." --format apa,mla,bibtex
 
-# Scholarly HTTP backend — no browser, no fallback, failures surface per format
-scholar-cite cite "Attention Is All You Need" --no-browser
+# Cap or expand the candidate pool (Scholar may have multiple clusters)
+scholar-cite cite "..." --limit 3
 
-# Be strict: exit non-zero if any requested format is missing
-scholar-cite cite "Attention Is All You Need" --format all --strict
+# Machine-readable output (includes citation_errors on partial results)
+scholar-cite cite "..." --format all --json
 
-# Manage the browser cookie cache
+# Write the output to a file instead of stdout
+scholar-cite cite "..." --format bibtex -o refs.bib
+
+# Skip the browser and use scholarly's HTTP backend only — no silent fallback
+scholar-cite cite "..." --no-browser
+
+# Fail loudly (exit code 4) if any requested format is missing
+scholar-cite cite "..." --format all --strict
+
+# Inspect or clear the browser's cookie cache
 scholar-cite auth status
 scholar-cite auth reset
 ```
 
-### First run
-
-A Chromium window pops up. If Scholar shows "Please show you're not a robot",
-click through the challenge — the tool waits up to 5 minutes. Cookies are cached
-at `~/.cache/scholar-cite/cookies.json` and reused on subsequent runs, so you
-shouldn't see the challenge again for days.
-
 ### Exit codes
 
-| Code | Meaning |
-|------|---------|
-| 0 | Success (even if some formats are missing — they're reported on stderr) |
-| 2 | Search returned no results |
-| 4 | `--strict` set and at least one requested format was missing |
+| Code | Meaning                                                           |
+| ---- | ----------------------------------------------------------------- |
+| 0    | Success (even if some formats were missing — they're reported)    |
+| 2    | Search returned no results                                        |
+| 4    | `--strict` set and at least one requested format was missing      |
 
-## Example output
-
-Running `scholar-cite cite "Attention Is All You Need" --format all --limit 1 --browser`:
+### Example output (`--format all`)
 
 ```
 [1] Attention is all you need
     A Vaswani — proceedings.neurips.cc
     cluster_id: 5Gohgn6QFikJ
     ──────────────────────────────────────────────────
-    MLA:       Vaswani, Ashish, et al. "Attention is all you need." Advances ...
-    APA:       Vaswani, A., Shazeer, N., Parmar, N., ... (2017). Attention is ...
-    Chicago:   Vaswani, Ashish, Noam Shazeer, Niki Parmar, ... "Attention is ...
-    Harvard:   Vaswani, A., Shazeer, N., Parmar, N., ... 2017. Attention is ...
-    Vancouver: Vaswani A, Shazeer N, Parmar N, ... Attention is all you need ...
+    MLA:       Vaswani, Ashish, et al. "Attention is all you need." …
+    APA:       Vaswani, A., Shazeer, N., Parmar, N., … (2017). …
+    Chicago:   …
+    Harvard:   …
+    Vancouver: …
     Bibtex:
         @article{vaswani2017attention,
           title={Attention is all you need},
-          author={Vaswani, Ashish and Shazeer, Noam and ...},
-          ...
+          author={Vaswani, Ashish and Shazeer, Noam and …},
+          …
         }
     Endnote:
         %0 Journal Article
-        %T Attention is all you need
-        ...
+        …
     Refman:
         TY  - JOUR
-        T1  - Attention is all you need
-        ...
+        …
     Refworks:
         # Google Scholar's RefWorks export is an external redirect.
         # Import URL:
-        http://www.refworks.com/express?sid=google&...
+        http://www.refworks.com/express?sid=google&…
 ```
 
-## Key design decisions
+## How it works
 
-- **Free-first, paid fallback**: uses [`scholarly`](https://scholarly.readthedocs.io/) by default. A SerpAPI fallback for when Scholar rate-limits is planned (see design §5.4).
-- **Captcha handled once (planned)**: a browser opens, you solve the captcha manually, cookies cached and reused. See design §6.
-- **SQLite cache keyed by Scholar `cluster_id`** (planned): titles/DOIs are secondary indices, 90-day TTL. See design §4.
-- **Ambiguous matches**: non-interactive mode returns all candidates; interactive mode (planned) prompts you to pick.
-- **No Scholar request in tests**: CI uses saved HTML fixtures.
+`scholar-cite` has two backends with very different reliability profiles:
 
-## What's implemented vs planned
+1. **Playwright browser (default, most reliable).** A real headful Chromium
+   navigates Scholar's search page, cite popup, and export URLs. Light stealth
+   patches reduce anti-bot flags; if Scholar still asks for a captcha, the
+   user solves it once and the cookies carry the session for days.
+2. **scholarly HTTP (`--no-browser`, opt-in).** The [`scholarly`](https://scholarly.readthedocs.io/)
+   library's plain HTTP session. Fast when it works, but Scholar blocks it
+   aggressively. This path does **not** silently fall back to the browser —
+   failures surface per format instead.
 
-| Feature | Status |
-|---------|--------|
-| Scholar search (scholarly + browser fallback) | ✅ working |
-| `cluster_id` extraction (scholarly + browser) | ✅ working |
-| Cite-popup HTML fetch & parse (5 text formats) | ✅ working live |
-| Export formats (BibTeX / EndNote / RefMan / RefWorks) via `--browser` | ✅ **all 9 formats verified live** |
-| Playwright browser backend with cookie persistence | ✅ working |
-| Captcha: manual-solve once, cookies cached | ✅ working |
-| `auth status` / `auth reset` subcommands | ✅ working |
-| CLI (`cite`, plain + JSON output, `--format`, `--limit`, `-o`, `--browser`) | ✅ |
-| Batch mode (`-f titles.txt`) | ⏳ planned |
-| Interactive picker (`-i`) | ⏳ planned |
-| Clipboard (`-c`) | ⏳ planned |
-| SQLite cache keyed by `cluster_id` | ⏳ planned |
-| SerpAPI fallback backend | ⏳ planned |
-
-## Testing
-
-```bash
-pytest tests/ -v
-```
-
-All parsing/fetching logic is covered by unit tests using a saved cite-popup HTML fixture — no live Google Scholar calls in CI.
+Both paths converge on the same pipeline inside `search.py`, and both rank
+candidate clusters by source quality before applying `--limit` (see below).
+For the gritty details, read [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ## Missing-format handling
 
-If a format is requested but Scholar doesn't return it, the plain-text output
-shows `[MISSING: <reason>]` inline for that format, and a warning summary is
-printed to stderr. The JSON output adds a `citation_errors` field per paper.
-Use `--strict` if you want the command to exit non-zero on any missing format.
+When Scholar returns a format incompletely (some clusters are missing export
+links, some URLs 403, etc.), `scholar-cite` never drops it silently:
 
-## Known limitations (current MVP)
+- **Plain-text** output renders `[MISSING: <reason>]` inline for each failed
+  format.
+- **JSON** output adds a `citation_errors` field per paper.
+- **Stderr** gets a short warning summary listing every paper with missing
+  formats.
+- `--strict` elevates this to a non-zero exit code (4) for scripts that
+  can't afford partial results.
 
-- **RefWorks isn't a citation string** — Scholar's RefWorks export is a redirect to
-  `refworks.com/express`. The tool emits that URL instead; open it in a browser
-  logged into RefWorks to complete the import.
-- **Scholar rate-limits plain HTTP aggressively**. The default is the browser path;
-  `--no-browser` exists for scripted use but has no fallback.
-- **`--limit` caps the first result page** (typically ≤10). No pagination yet.
+## Source-quality ranking
+
+Google Scholar often indexes a paper multiple times (arXiv preprint, official
+conference version, third-party mirrors). Citation quality varies wildly —
+some mirrors produce metadata with reversed author order, fabricated volume
+numbers, and mangled venue strings. `scholar-cite` ranks candidates by host:
+
+| Tier            | Example hosts                                           |
+| --------------- | ------------------------------------------------------- |
+| Trusted venues  | `openaccess.thecvf.com`, `aclanthology.org`, `proceedings.neurips.cc`, `proceedings.mlr.press`, `ieeexplore.ieee.org`, `dl.acm.org`, `nature.com` |
+| Preprints       | `arxiv.org`, `biorxiv.org`                              |
+| Unknown         | Everything else (kept in Scholar's original order)      |
+| Known low-quality| `sandbox.getindico.io`, `scholar.google.com` self-refs |
+
+The real-world consequence: searching "Deep Residual Learning for Image
+Recognition" with `--limit 1` used to land on a sandbox indico mirror that
+produced `@inproceedings{kaiming2016deep, ..., volume={34}}`. With ranking on,
+the same query lands on the clean cluster `he2016deep` from the official CVPR
+host. See `tests/test_ranking.py::test_rank_papers_handles_resnet_style_scenario`.
+
+## What's implemented vs planned
+
+| Feature                                                        | Status |
+| -------------------------------------------------------------- | ------ |
+| Scholar search (browser + scholarly paths)                     | ✅     |
+| `cluster_id` extraction                                        | ✅     |
+| Cite-popup HTML parse (five text formats)                      | ✅     |
+| Four export formats via `BrowserContext.request`               | ✅     |
+| Playwright cookie persistence / captcha recovery               | ✅     |
+| Source-quality ranking of candidate clusters                   | ✅     |
+| `auth status` / `auth reset` subcommands                       | ✅     |
+| `--format`, `--limit`, `-o`, `--json`, `--no-browser`, `--strict`| ✅   |
+| Batch mode (`-f titles.txt`)                                   | ⏳ planned |
+| Interactive picker (`-i`)                                      | ⏳ planned |
+| Clipboard (`-c`)                                               | ⏳ planned |
+| SQLite cache keyed by `cluster_id`                             | ⏳ planned |
+| SerpAPI fallback backend                                       | ⏳ planned |
+
+## Running the tests
+
+```bash
+pip install -e ".[dev]"
+pytest -q
+```
+
+All parsing and fetching logic is covered by 31 unit tests. No live Google
+Scholar calls in CI — tests use a saved HTML fixture and fake fetchers.
+
+```bash
+ruff check src/ tests/      # lint
+ruff format src/ tests/     # format
+```
 
 ## Project layout
 
 ```
 scholar-cite/
-├── docs/
-│   ├── design.md              # full design spec
-│   └── test-run-2026-04-19.md # first live test results
-├── src/scholar_cite/
-│   ├── cli.py                 # Typer entry point (cite, auth status, auth reset)
-│   ├── search.py              # scholarly path + browser fallback orchestration
-│   ├── citation.py            # cite-popup parser + 9-format assembly
-│   ├── browser_fetcher.py     # Playwright headful browser w/ cookie persistence
-│   ├── models.py              # Paper, CitationSet dataclasses
-│   └── __main__.py
-├── tests/
-│   ├── fixtures/
-│   │   └── cite_popup_sample.html
-│   └── test_citation.py
+├── LICENSE                    MIT
+├── CHANGELOG.md               Release notes
+├── README.md                  ← you are here
 ├── pyproject.toml
-└── README.md
+├── docs/
+│   ├── ARCHITECTURE.md        Current code map (start here to hack)
+│   ├── design.md              Original design spec (planning doc)
+│   └── test-run-2026-04-19.md Live end-to-end evidence
+├── examples/
+│   └── demo_five_papers.py    Fetches BibTeX for 5 classic ML papers
+├── src/scholar_cite/
+│   ├── cli.py                 Typer CLI (`cite`, `auth status`, `auth reset`)
+│   ├── search.py              Browser + scholarly orchestration
+│   ├── citation.py            Cite-popup parser + 9-format assembly
+│   ├── browser_fetcher.py     Playwright session with cookie persistence
+│   ├── ranking.py             Source-quality hostname ranking
+│   └── models.py              Paper / CitationSet dataclasses
+└── tests/
+    ├── fixtures/
+    │   └── cite_popup_sample.html
+    ├── test_browser_fetcher.py
+    ├── test_citation.py
+    ├── test_cli.py
+    ├── test_ranking.py
+    └── test_search.py
 ```
+
+## Documentation index
+
+| Doc | What you'll find there |
+| --- | ---------------------- |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Module map, one-query lifecycle, exception policy, cache layout |
+| [`docs/design.md`](docs/design.md) | Original 14-section design specification (planning-era snapshot) |
+| [`docs/test-run-2026-04-19.md`](docs/test-run-2026-04-19.md) | Live end-to-end evidence for the 9-format pipeline |
+| [`CHANGELOG.md`](CHANGELOG.md) | Release-level summary of what changed and why |
 
 ## License
 
-MIT (planned).
+[MIT](LICENSE). Google Scholar's HTML structure and Terms of Service govern
+your use of the upstream data.
