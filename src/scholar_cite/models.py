@@ -42,7 +42,14 @@ class Paper:
     venue: str = ""
     doi: str | None = None
     citations: CitationSet = field(default_factory=CitationSet)
+    # Per-format fetch errors, keyed by format name. Present → that format failed
+    # and the corresponding CitationSet field is empty. Absent → either the format
+    # succeeded or was never attempted.
+    citation_errors: dict[str, str] = field(default_factory=dict)
 
     @property
     def first_author(self) -> str:
         return self.authors[0] if self.authors else ""
+
+    def missing_formats(self, requested: list[str] | tuple[str, ...]) -> list[str]:
+        return [f for f in requested if not getattr(self.citations, f, "")]

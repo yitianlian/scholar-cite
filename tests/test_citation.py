@@ -22,7 +22,7 @@ def _load(name: str) -> str:
 
 def test_parse_cite_html_extracts_all_five_text_formats():
     html = _load("cite_popup_sample.html")
-    citations, exports = parse_cite_html(html)
+    citations, _ = parse_cite_html(html)
 
     assert "Vaswani, Ashish, et al." in citations.mla
     assert "Vaswani, A., Shazeer, N." in citations.apa
@@ -74,20 +74,61 @@ def test_fetch_citation_set_composes_all_nine_formats():
                 return body
         raise AssertionError(f"Unexpected URL: {url}")
 
-    citations = fetch_citation_set("5Gohgn6QFikJ", fetch=fake_fetch)
+    citations, errors = fetch_citation_set("5Gohgn6QFikJ", fetch=fake_fetch)
 
-    assert citations.mla.startswith("Vaswani, Ashish")
-    assert citations.apa.startswith("Vaswani, A.")
-    assert citations.chicago.startswith("Vaswani, Ashish, Noam Shazeer")
-    assert citations.harvard.startswith("Vaswani, A., Shazeer, N.")
-    assert citations.vancouver.startswith("Vaswani A")
+    assert errors == {}
     assert citations.bibtex.startswith("@inproceedings{vaswani2017")
     assert citations.endnote.startswith("%0 Conference Paper")
     assert citations.refman.startswith("TY  - CONF")
     assert citations.refworks.startswith("RT Conference Proceedings")
-
-    # Every one of the 9 formats populated — no empties.
     assert all(citations.as_dict().values())
+
+
+def test_fetch_citation_set_records_per_export_failures():
+    """Regression: partial failures must surface in the returned errors dict,
+    not be silently swallowed."""
+    cite_html = _load("cite_popup_sample.html")
+
+    def fake_fetch(url: str, timeout: float = 20.0) -> str:
+        if "output=cite" in url:
+            return cite_html
+        if "/scholar.bib" in url:
+            return "@article{ok,\n  title={OK}\n}"
+        # All other export URLs fail.
+        raise RuntimeError(f"HTTP 403 on {url}")
+
+    citations, errors = fetch_citation_set("5Gohgn6QFikJ", fetch=fake_fetch)
+
+    assert citations.bibtex.startswith("@article{ok")
+    # Text formats all came from the popup, so no errors for them.
+    assert "mla" not in errors and "apa" not in errors
+    # The three failed exports must be recorded.
+    assert set(errors.keys()) == {"endnote", "refman", "refworks"}
+    for name in ("endnote", "refman", "refworks"):
+        assert "RuntimeError" in errors[name]
+        assert "403" in errors[name]
+
+
+def test_fetch_citation_set_refworks_redirect_cleaned():
+    cite_html = _load("cite_popup_sample.html")
+    redirect_html = (
+        "<!doctype html><html><head>"
+        "<script>location.replace('http://www.refworks.com/express?sid\\x3dgoogle"
+        "\\x26au\\x3dFoo')</script></head><body></body></html>"
+    )
+
+    def fake_fetch(url: str, timeout: float = 20.0) -> str:
+        if "output=cite" in url:
+            return cite_html
+        if "/scholar.rfw" in url:
+            return redirect_html
+        return "stub"
+
+    citations, _ = fetch_citation_set("x", fetch=fake_fetch)
+    assert "www.refworks.com/express" in citations.refworks
+    assert citations.refworks.startswith("# Google Scholar's RefWorks export")
+    # The escaped chars got decoded:
+    assert "sid=google" in citations.refworks and "au=Foo" in citations.refworks
 
 
 def test_extract_cluster_id_from_url_scholarbib():

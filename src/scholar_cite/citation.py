@@ -8,7 +8,7 @@ from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup
 
-from scholar_cite.models import CitationSet
+from scholar_cite.models import EXPORT_FORMATS, TEXT_FORMATS, CitationSet
 
 
 class PageFetcher(Protocol):
@@ -42,6 +42,14 @@ _EXPORT_EXT_MAP = {
 
 class CaptchaError(RuntimeError):
     """Raised when Scholar serves a captcha instead of the expected page."""
+
+
+class ScholarBlockedError(RuntimeError):
+    """Raised when Scholar rejects the request (HTTP 403/429, MaxTriesExceeded, captcha).
+
+    Semantically: 'Scholar is actively refusing us, falling back to a different
+    backend may help'. Distinct from genuine bugs (parsing, type errors, etc.).
+    """
 
 
 class ParseError(RuntimeError):
@@ -129,11 +137,20 @@ def fetch_citation_set(
     cluster_id: str,
     fetch: PageFetcher,
     timeout: float = 20.0,
-) -> CitationSet:
+) -> tuple[CitationSet, dict[str, str]]:
     """Fetch all 9 formats for a paper via Scholar's cite popup + export links.
 
-    `fetch(url, timeout=...)` is injected so we can share scholarly's HTTP session
-    (which carries the cookies Scholar expects).
+    Returns `(CitationSet, errors)` where `errors` maps format name → one-line
+    failure reason for any format that could not be retrieved. A partial
+    result is always returned — the caller decides whether to treat missing
+    formats as fatal.
+
+    Raises:
+        CaptchaError / ScholarBlockedError: the cite popup itself was blocked;
+            nothing useful was fetched. The caller should either retry via a
+            different backend or surface the error to the user.
+        ParseError: the cite popup was served but its structure wasn't
+            recognised — indicates a bug or a Scholar HTML change.
     """
     cite_url = CITE_URL_TEMPLATE.format(cluster_id=cluster_id)
     html = fetch(cite_url, timeout=timeout)
@@ -141,6 +158,19 @@ def fetch_citation_set(
         raise CaptchaError(f"Scholar captcha triggered on cluster_id={cluster_id}")
 
     citations, export_links = parse_cite_html(html)
+    errors: dict[str, str] = {}
+
+    # Any text format that didn't come through is a parse-level miss, not a
+    # network failure — record it so the caller can decide.
+    for name in TEXT_FORMATS:
+        if not getattr(citations, name):
+            errors[name] = "not present in cite popup"
+
+    # Record which export formats didn't even have a link in the HTML.
+    found_export_fields = {link.field for link in export_links}
+    for name in EXPORT_FORMATS:
+        if name not in found_export_fields:
+            errors[name] = "no export link in cite popup"
 
     for link in export_links:
         try:
@@ -149,10 +179,13 @@ def fetch_citation_set(
                 raise CaptchaError(f"Scholar captcha triggered on export {link.field}")
             cleaned = _clean_refworks(body) if link.field == "refworks" else body
             setattr(citations, link.field, cleaned.strip())
-        except Exception:  # noqa: BLE001 — per-format failure shouldn't kill the paper.
-            continue
+            errors.pop(link.field, None)
+        except CaptchaError as e:
+            errors[link.field] = f"captcha: {e}"
+        except Exception as e:  # noqa: BLE001 — narrow handling; still record.
+            errors[link.field] = f"{type(e).__name__}: {e}"
 
-    return citations
+    return citations, errors
 
 
 _REFWORKS_REDIRECT_RE = re.compile(

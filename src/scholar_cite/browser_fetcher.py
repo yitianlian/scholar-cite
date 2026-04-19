@@ -220,17 +220,45 @@ class BrowserFetcher:
 
 
 def cookies_status() -> dict:
+    """Summarise the cached cookie file.
+
+    Robust against a missing file, a corrupt JSON payload, or a payload whose
+    shape is unexpected — each of those returns a descriptive error dict
+    rather than raising, so `scholar-cite auth status` can always run.
+    """
     path = _cookie_path()
+    base = {"path": str(path), "exists": path.exists()}
     if not path.exists():
-        return {"path": str(path), "exists": False}
-    payload = json.loads(path.read_text(encoding="utf-8"))
+        return base
+
+    try:
+        raw = path.read_text(encoding="utf-8")
+    except OSError as e:
+        return {**base, "error": f"cannot read cookie file: {e}"}
+
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError as e:
+        return {
+            **base,
+            "error": f"cookie file is not valid JSON: {e.msg} (line {e.lineno}, col {e.colno})",
+            "size_bytes": len(raw),
+        }
+
+    if not isinstance(payload, dict):
+        return {**base, "error": f"cookie file root is {type(payload).__name__}, expected object"}
+
     cookies = payload.get("cookies", [])
+    if not isinstance(cookies, list):
+        return {**base, "error": f"'cookies' field is {type(cookies).__name__}, expected list"}
+
     return {
-        "path": str(path),
-        "exists": True,
+        **base,
         "saved_at": payload.get("saved_at"),
         "cookie_count": len(cookies),
-        "domains": sorted({c.get("domain", "") for c in cookies if c.get("domain")}),
+        "domains": sorted(
+            {c.get("domain", "") for c in cookies if isinstance(c, dict) and c.get("domain")}
+        ),
     }
 
 

@@ -19,12 +19,17 @@ Python 3.10+ required (tested on 3.14).
 
 ## Usage
 
+The default backend is **Playwright** (headful Chromium) — the only consistent
+way to get Scholar to serve 9/9 formats. The scholarly HTTP backend is
+available via `--no-browser` for users who want it, but it won't silently fall
+back — failures are reported.
+
 ```bash
-# Single title → BibTeX on stdout (default, tries plain HTTP, falls back to browser)
+# Default: browser path, BibTeX on stdout
 scholar-cite cite "Attention Is All You Need"
 
-# All 9 formats, via the headful browser (most reliable)
-scholar-cite cite "Attention Is All You Need" --format all --browser
+# All 9 formats
+scholar-cite cite "Attention Is All You Need" --format all
 
 # Specific subset
 scholar-cite cite "Attention Is All You Need" --format apa,mla,bibtex
@@ -32,23 +37,37 @@ scholar-cite cite "Attention Is All You Need" --format apa,mla,bibtex
 # Cap candidates
 scholar-cite cite "Attention Is All You Need" --limit 3
 
-# JSON output (for scripting)
-scholar-cite cite "Attention Is All You Need" --format all --json --browser
+# JSON output (includes a `citation_errors` field when any format is missing)
+scholar-cite cite "Attention Is All You Need" --format all --json
 
 # Write to file
-scholar-cite cite "Attention Is All You Need" --format bibtex -o refs.bib --browser
+scholar-cite cite "Attention Is All You Need" --format bibtex -o refs.bib
+
+# Scholarly HTTP backend — no browser, no fallback, failures surface per format
+scholar-cite cite "Attention Is All You Need" --no-browser
+
+# Be strict: exit non-zero if any requested format is missing
+scholar-cite cite "Attention Is All You Need" --format all --strict
 
 # Manage the browser cookie cache
 scholar-cite auth status
 scholar-cite auth reset
 ```
 
-### First run with `--browser`
+### First run
 
 A Chromium window pops up. If Scholar shows "Please show you're not a robot",
 click through the challenge — the tool waits up to 5 minutes. Cookies are cached
 at `~/.cache/scholar-cite/cookies.json` and reused on subsequent runs, so you
 shouldn't see the challenge again for days.
+
+### Exit codes
+
+| Code | Meaning |
+|------|---------|
+| 0 | Success (even if some formats are missing — they're reported on stderr) |
+| 2 | Search returned no results |
+| 4 | `--strict` set and at least one requested format was missing |
 
 ## Example output
 
@@ -118,13 +137,20 @@ pytest tests/ -v
 
 All parsing/fetching logic is covered by unit tests using a saved cite-popup HTML fixture — no live Google Scholar calls in CI.
 
+## Missing-format handling
+
+If a format is requested but Scholar doesn't return it, the plain-text output
+shows `[MISSING: <reason>]` inline for that format, and a warning summary is
+printed to stderr. The JSON output adds a `citation_errors` field per paper.
+Use `--strict` if you want the command to exit non-zero on any missing format.
+
 ## Known limitations (current MVP)
 
 - **RefWorks isn't a citation string** — Scholar's RefWorks export is a redirect to
   `refworks.com/express`. The tool emits that URL instead; open it in a browser
   logged into RefWorks to complete the import.
-- **Scholar rate-limits plain HTTP aggressively**. Use `--browser` for reliable runs;
-  the default tries the scholarly path first and falls back to the browser when blocked.
+- **Scholar rate-limits plain HTTP aggressively**. The default is the browser path;
+  `--no-browser` exists for scripted use but has no fallback.
 - **`--limit` caps the first result page** (typically ≤10). No pagination yet.
 
 ## Project layout
