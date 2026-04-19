@@ -350,6 +350,7 @@ scholar-cite/
 | [`.claude/skills/scholar-cite/SKILL.md`](.claude/skills/scholar-cite/SKILL.md) | agent skill —— Claude Code 从 `.claude/skills/` 自动发现，Codex CLI 从 `.agents/skills/` 自动发现（符号链接到同一文件）|
 | [`.claude/skills/scholar-cite/flags.md`](.claude/skills/scholar-cite/flags.md) | 完整 flag 参考 + 供 skill 引用的 Python API 片段 |
 | [`CHANGELOG.md`](CHANGELOG.md) | 发布级别的变更摘要 |
+| [`PUBLISHING.md`](PUBLISHING.md) | 如何发一个新版本（改 version、`twine check`、TestPyPI dry-run、PyPI 正式 upload、打 GitHub release）|
 
 ## License
 

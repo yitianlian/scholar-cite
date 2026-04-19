@@ -410,6 +410,7 @@ scholar-cite/
 | [`.claude/skills/scholar-cite/SKILL.md`](.claude/skills/scholar-cite/SKILL.md) | Agent skill — auto-discovered by Claude Code from `.claude/skills/` and by Codex CLI from `.agents/skills/` (symlinked to the same file); teaches the agent when and how to call the CLI |
 | [`.claude/skills/scholar-cite/flags.md`](.claude/skills/scholar-cite/flags.md) | Flag reference + Python API snippet referenced by the skill |
 | [`CHANGELOG.md`](CHANGELOG.md) | Release-level summary of what changed and why |
+| [`PUBLISHING.md`](PUBLISHING.md) | How to cut a release (version bump, `twine check`, TestPyPI dry-run, real PyPI upload, GitHub release) |
 
 ## License
 

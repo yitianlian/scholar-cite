@@ -6,6 +6,16 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+_Nothing yet since v0.1.0._
+
+## [0.1.0] — 2026-04-19
+
+First public release. Repo made public on 2026-04-19 after a secret-scan
+audit came back clean (no tokens, no `.env` / cookie files tracked, no
+personal path leaks). Available at
+https://github.com/yitianlian/scholar-cite; wheel + sdist attached to the
+[v0.1.0 GitHub release](https://github.com/yitianlian/scholar-cite/releases/tag/v0.1.0).
+
 ### Fixed
 - **`scholar-cite --version` / `-V` now works.** `__version__ = "0.1.0"` was
   defined in `src/scholar_cite/__init__.py` but not exposed to the CLI, so
