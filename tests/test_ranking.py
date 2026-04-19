@@ -56,18 +56,35 @@ def test_rank_papers_is_stable_within_a_tier():
     assert [p.cluster_id for p in ranked] == ["t", "a", "b", "c"]
 
 
+def test_source_score_recognises_cv_foundation_org():
+    """Regression for review finding #3: cv-foundation.org is an official CVF archive
+    and must be tier-1, not unknown."""
+    assert source_score(_p("a", "https://www.cv-foundation.org/openaccess/resnet.pdf")) == 100
+    assert source_score(_p("a", "https://cv-foundation.org/openaccess/resnet.pdf")) == 100
+
+
+def test_rank_papers_official_cvf_beats_unknown_mirror():
+    """Regression for review finding #3: an unknown mirror listed FIRST by Scholar
+    must NOT outrank the cv-foundation.org cluster when ranking is on."""
+    mirror = _p("mirror", "https://mirror.example.com/resnet.pdf")  # unknown → 0
+    cvf = _p("cvf", "https://www.cv-foundation.org/openaccess/resnet.pdf")  # now 100
+    ranked = rank_papers([mirror, cvf])
+    assert [p.cluster_id for p in ranked] == ["cvf", "mirror"]
+
+
 def test_rank_papers_handles_resnet_style_scenario():
     """Simulate the real-world ResNet case: bad cluster #1, good cluster #2."""
     bad = _p("56OwN-n020UJ", "https://sandbox.getindico.io/event/101/contributions/x.pdf")
-    good1 = _p("LrPNPdmMzoAJ", "https://www.cv-foundation.org/openaccess/resnet.pdf")
-    good2 = _p("F3zseCJbSpwJ", "https://ieeexplore.ieee.org/document/7780459")
+    cvf = _p("LrPNPdmMzoAJ", "https://www.cv-foundation.org/openaccess/resnet.pdf")
+    ieee = _p("F3zseCJbSpwJ", "https://ieeexplore.ieee.org/document/7780459")
     arxiv = _p("X", "https://arxiv.org/abs/1512.03385")
 
     # Scholar's original order (worst result first, which is what we actually see)
-    ranked = rank_papers([bad, good1, good2, arxiv])
-    # IEEE (95) and arXiv (80) are recognised; cv-foundation.org is unknown (0);
-    # indico sandbox is -100. So IEEE > arXiv > cv-foundation > indico.
-    assert ranked[0].cluster_id == "F3zseCJbSpwJ"  # IEEE
-    assert ranked[1].cluster_id == "X"  # arXiv
-    assert ranked[2].cluster_id == "LrPNPdmMzoAJ"  # cv-foundation (unknown, 0)
-    assert ranked[-1].cluster_id == "56OwN-n020UJ"  # sandbox, last
+    ranked = rank_papers([bad, cvf, ieee, arxiv])
+    # CVF (100) > IEEE (95) > arXiv (80) > sandbox (-100)
+    assert [p.cluster_id for p in ranked] == [
+        "LrPNPdmMzoAJ",
+        "F3zseCJbSpwJ",
+        "X",
+        "56OwN-n020UJ",
+    ]

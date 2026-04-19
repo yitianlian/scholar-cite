@@ -23,12 +23,16 @@ from scholar_cite.models import Paper
 _SOURCE_SCORES: dict[str, int] = {
     # Tier 1 — authoritative venue proceedings / repositories
     "openaccess.thecvf.com": 100,
+    "cv-foundation.org": 100,  # older CVF proceedings archive (pre-openaccess)
+    "thecvf.com": 100,  # bare-domain mirror of the CVF proceedings
     "aclanthology.org": 100,
     "proceedings.neurips.cc": 100,
     "papers.nips.cc": 100,
     "proceedings.mlr.press": 100,
     "openreview.net": 100,
     "jmlr.org": 100,
+    "ojs.aaai.org": 100,  # official AAAI OJS
+    "aaai.org": 95,
     "ieeexplore.ieee.org": 95,
     "dl.acm.org": 95,
     "link.springer.com": 90,

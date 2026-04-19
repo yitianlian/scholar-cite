@@ -61,7 +61,8 @@ def test_render_json_exposes_citation_errors():
 
 
 def test_cli_cite_strict_flag_exits_non_zero_on_partial(monkeypatch):
-    """Review finding #2: --strict must propagate partial failure as exit code."""
+    """Review finding #2 (part 1): --strict must propagate partial failure as
+    exit code, and the message must mention the missing formats."""
     monkeypatch.setattr(cli, "_parse_formats", lambda _raw: ["apa", "bibtex"])
 
     def fake_search(query, limit, no_browser):
@@ -74,8 +75,56 @@ def test_cli_cite_strict_flag_exits_non_zero_on_partial(monkeypatch):
 
     result = runner.invoke(cli.app, ["cite", "any title", "--format", "apa,bibtex", "--strict"])
     assert result.exit_code == cli.EXIT_PARTIAL
-    # Warning must be visible on stderr.
-    assert "missing" in result.stderr.lower()
+    # Error message must be visible on stderr and name the missing format(s).
+    assert "missing" in result.output.lower() or "missing" in (result.stderr or "").lower()
+
+
+def test_cli_cite_strict_does_not_write_file_on_partial(tmp_path, monkeypatch):
+    """Review finding #2 (part 2): --strict with -o must NOT write a file when
+    any requested format is missing. Previously, the file was written AND the
+    command exited 4 — dangerous for automation that checks file existence first."""
+    monkeypatch.setattr(cli, "_parse_formats", lambda _raw: ["apa", "bibtex"])
+
+    def fake_search(query, limit, no_browser):
+        p = Paper(cluster_id="x", title="T")
+        p.citations = CitationSet(apa="Only APA worked.")
+        p.citation_errors = {"bibtex": "download aborted"}
+        return [p]
+
+    monkeypatch.setattr("scholar_cite.search.search", fake_search)
+
+    out_file = tmp_path / "refs.txt"
+    result = runner.invoke(
+        cli.app,
+        ["cite", "any title", "--format", "apa,bibtex", "--strict", "-o", str(out_file)],
+    )
+
+    assert result.exit_code == cli.EXIT_PARTIAL
+    assert not out_file.exists(), (
+        f"--strict should refuse to write output on partial results, but {out_file} was created"
+    )
+
+
+def test_cli_cite_strict_writes_file_when_complete(tmp_path, monkeypatch):
+    """--strict must still produce output when every requested format is present."""
+    monkeypatch.setattr(cli, "_parse_formats", lambda _raw: ["apa"])
+
+    def fake_search(query, limit, no_browser):
+        p = Paper(cluster_id="x", title="T")
+        p.citations = CitationSet(apa="All good.")
+        return [p]
+
+    monkeypatch.setattr("scholar_cite.search.search", fake_search)
+
+    out_file = tmp_path / "refs.txt"
+    result = runner.invoke(
+        cli.app,
+        ["cite", "any title", "--format", "apa", "--strict", "-o", str(out_file)],
+    )
+
+    assert result.exit_code == cli.EXIT_OK
+    assert out_file.exists()
+    assert "All good." in out_file.read_text()
 
 
 def test_cli_cite_no_strict_exits_zero_but_warns(monkeypatch):

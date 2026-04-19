@@ -28,7 +28,7 @@ from bs4 import BeautifulSoup
 
 from scholar_cite.browser_fetcher import BrowserFetcher
 from scholar_cite.citation import (
-    ScholarBlockedError,
+    PageFetcher,
     extract_cluster_id,
     fetch_citation_set,
 )
@@ -93,6 +93,23 @@ def _is_scholar_blocked(exc: BaseException) -> bool:
     return "403" in msg or "429" in msg or "MaxTries" in msg or "captcha" in msg.lower()
 
 
+def _fill_paper_citations(paper: Paper, fetch: PageFetcher) -> None:
+    """Populate a single paper's CitationSet + citation_errors.
+
+    Scholar-blocking exceptions (403/429/captcha/MaxTries/low-level HTTP
+    RuntimeError from BrowserFetcher) are converted into per-format error
+    entries so partial/empty results remain visible instead of crashing the
+    whole run. Real programming errors still propagate.
+    """
+    try:
+        paper.citations, paper.citation_errors = fetch_citation_set(paper.cluster_id, fetch=fetch)
+    except Exception as e:
+        if not _is_scholar_blocked(e):
+            raise
+        for name in ALL_FORMATS:
+            paper.citation_errors.setdefault(name, f"scholar blocked: {e}")
+
+
 def _search_via_scholarly(query: str, limit: int) -> list[Paper]:
     """Search via scholarly, then re-rank by source quality before truncating.
 
@@ -123,18 +140,7 @@ def _fill_via_scholarly(papers: list[Paper]) -> None:
         return text
 
     for paper in papers:
-        try:
-            paper.citations, paper.citation_errors = fetch_citation_set(
-                paper.cluster_id, fetch=fetch
-            )
-        except Exception as e:
-            if _is_scholar_blocked(e):
-                # Record it as a blocked-by-Scholar state; caller decides policy.
-                for name in ALL_FORMATS:
-                    paper.citation_errors.setdefault(name, f"scholar blocked: {e}")
-            else:
-                # Real bug: don't mask it.
-                raise
+        _fill_paper_citations(paper, fetch)
 
 
 # ----------------------- browser path -----------------------------------------
@@ -220,13 +226,7 @@ def _search_via_browser(query: str, limit: int) -> list[Paper]:
             return bf.fetch(u, timeout=timeout, settle_ms=600)
 
         for i, paper in enumerate(papers, 1):
-            try:
-                paper.citations, paper.citation_errors = fetch_citation_set(
-                    paper.cluster_id, fetch=fetch
-                )
-            except ScholarBlockedError as e:
-                for name in ALL_FORMATS:
-                    paper.citation_errors.setdefault(name, f"scholar blocked: {e}")
+            _fill_paper_citations(paper, fetch)
             filled = sum(1 for v in paper.citations.as_dict().values() if v)
             msg = f"[browser]   [{i}/{len(papers)}] {paper.cluster_id} — {filled}/9 formats"
             if paper.citation_errors:

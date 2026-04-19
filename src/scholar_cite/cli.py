@@ -138,6 +138,31 @@ def cite(
     papers = search(query, limit=limit, no_browser=no_browser)
     typer.echo(f"Found {len(papers)} result(s).", err=True)
 
+    # No results → abort BEFORE writing anything.
+    if not papers:
+        typer.echo("(no results)", err=True)
+        raise typer.Exit(code=EXIT_NO_RESULTS)
+
+    issues = _summarize_missing(papers, formats)
+
+    # `--strict` gate runs BEFORE any output is produced. If any requested format
+    # is missing and the caller asked for strictness, abort without touching
+    # stdout or the `-o` file — downstream automation cannot then mistake a
+    # partial dump for a successful run.
+    if strict and issues:
+        typer.echo(
+            f"Error: {len(issues)} paper(s) missing requested format(s) (--strict):",
+            err=True,
+        )
+        for line in issues:
+            typer.echo(f"  {line}", err=True)
+        typer.echo(
+            "Refusing to write output under --strict. "
+            "Rerun without --strict to accept partial results.",
+            err=True,
+        )
+        raise typer.Exit(code=EXIT_PARTIAL)
+
     text = _render_json(papers, formats) if as_json else _render_plain(papers, formats)
 
     if output:
@@ -147,17 +172,11 @@ def cite(
     else:
         sys.stdout.write(text)
 
-    if not papers:
-        raise typer.Exit(code=EXIT_NO_RESULTS)
-
-    issues = _summarize_missing(papers, formats)
     if issues:
         typer.echo("", err=True)
         typer.echo(f"Warning: {len(issues)} paper(s) missing requested format(s):", err=True)
         for line in issues:
             typer.echo(f"  {line}", err=True)
-        if strict:
-            raise typer.Exit(code=EXIT_PARTIAL)
 
 
 @auth_app.command("status")

@@ -6,11 +6,35 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- **Browser path no longer crashes on cite-popup HTTP 403.** The per-paper
+  citation loop used to catch only `ScholarBlockedError`, but
+  `BrowserFetcher.fetch()` raises a plain `RuntimeError("... returned HTTP 403")`
+  on anti-bot responses, and `fetch_citation_set()` raises `CaptchaError`,
+  neither of which matched the old catch. Extracted a shared
+  `_fill_paper_citations()` that funnels every scholar-blocking exception
+  (via `_is_scholar_blocked()`) into per-format error entries; real bugs still
+  propagate. Used by both the browser and scholarly paths.
+- **`--strict` no longer writes a partial output file before exiting 4.** The
+  strict gate now runs before any output is produced — neither stdout nor the
+  `-o` file is touched when any requested format is missing. Downstream
+  automation that checks file existence first will no longer be fooled by a
+  partially-populated dump.
+- **`cv-foundation.org` added to the trusted-host ranking table.** The older
+  CVF proceedings archive (pre-`openaccess.thecvf.com`) was getting the default
+  score of 0, so an unknown mirror listed first by Scholar would outrank it.
+  Also added `thecvf.com` bare-domain, `ojs.aaai.org`, and `aaai.org` for
+  completeness. The ResNet-scenario regression test now asserts the CVF
+  cluster lands first.
+
 ### Added
 - Packaging polish: MIT `LICENSE`, expanded `pyproject.toml` metadata
   (classifiers, keywords, project URLs, optional-dependencies group, ruff + pytest
   configuration), `CHANGELOG.md`, `docs/ARCHITECTURE.md`, and an `examples/`
   directory with a five-paper demo script.
+- 7 new regression tests (38 total, up from 31) covering each of the three
+  review findings and two adjacent cases (real bugs still propagate; strict
+  still writes output when the result is complete).
 
 ### Changed
 - Code formatted with `ruff format` and lint-clean under the new ruff ruleset

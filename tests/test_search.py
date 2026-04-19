@@ -85,3 +85,57 @@ def test_fill_via_scholarly_records_blocked_state(monkeypatch, dummy_paper):
     assert set(dummy_paper.citation_errors.keys()) == set(ALL_FORMATS)
     for err in dummy_paper.citation_errors.values():
         assert "scholar blocked" in err
+
+
+def test_fill_paper_citations_catches_low_level_http_403(monkeypatch, dummy_paper):
+    """Regression for review finding #1.
+
+    In the browser path, `BrowserFetcher.fetch()` raises a plain
+    RuntimeError("... returned HTTP 403") when Scholar blocks the cite popup.
+    The browser loop used to catch only ScholarBlockedError, so that RuntimeError
+    propagated and killed the whole command. `_fill_paper_citations` now funnels
+    every scholar-blocking exception (CaptchaError, MaxTriesExceeded, low-level
+    RuntimeError with 403/429/captcha in the message) into per-format errors.
+    """
+
+    def boom(*_args, **_kwargs):
+        raise RuntimeError("https://scholar.google.com/... returned HTTP 403")
+
+    monkeypatch.setattr(search_mod, "fetch_citation_set", boom)
+
+    # Must NOT raise — all 9 formats recorded as blocked.
+    search_mod._fill_paper_citations(dummy_paper, fetch=lambda url, timeout=20: "")
+
+    from scholar_cite.models import ALL_FORMATS
+
+    assert set(dummy_paper.citation_errors.keys()) == set(ALL_FORMATS)
+    for err in dummy_paper.citation_errors.values():
+        assert "scholar blocked" in err
+        assert "403" in err
+
+
+def test_fill_paper_citations_still_propagates_real_bugs(monkeypatch, dummy_paper):
+    """The narrow catch must NOT mask genuine programming errors."""
+
+    def real_bug(*_args, **_kwargs):
+        raise ValueError("parser expected <tr>, got <table>")
+
+    monkeypatch.setattr(search_mod, "fetch_citation_set", real_bug)
+
+    with pytest.raises(ValueError, match="parser expected"):
+        search_mod._fill_paper_citations(dummy_paper, fetch=lambda url, timeout=20: "")
+
+
+def test_fill_paper_citations_catches_captcha_error(monkeypatch, dummy_paper):
+    """CaptchaError is a scholar-blocking signal and must be caught, not raised."""
+    from scholar_cite.citation import CaptchaError
+
+    def captcha(*_args, **_kwargs):
+        raise CaptchaError("Scholar captcha triggered on cluster_id=abc")
+
+    monkeypatch.setattr(search_mod, "fetch_citation_set", captcha)
+    search_mod._fill_paper_citations(dummy_paper, fetch=lambda url, timeout=20: "")
+
+    from scholar_cite.models import ALL_FORMATS
+
+    assert set(dummy_paper.citation_errors.keys()) == set(ALL_FORMATS)
