@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+
+# Tooling
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Editor
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Project-local runtime artifacts (should live in user cache/config dirs, not repo)
+*.db
+cookies.json
+config.toml
+
+# Playwright browsers (user installs globally via `playwright install`)
+.playwright/

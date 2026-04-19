@@ -1,0 +1,32 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "scholar-cite"
+version = "0.1.0"
+description = "CLI to fetch all 9 Google Scholar citation formats by paper title"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Touencent" }]
+dependencies = [
+  "typer>=0.12",
+  "scholarly>=1.7",
+  "requests>=2.31",
+  "beautifulsoup4>=4.12",
+  "lxml>=5.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.4"]
+
+[project.scripts]
+scholar-cite = "scholar_cite.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/scholar_cite"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
