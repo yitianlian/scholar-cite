@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pytest
 from typer.testing import CliRunner
 
 from scholar_cite import cli
@@ -149,3 +150,63 @@ def test_cli_cite_no_results_returns_exit_2(monkeypatch):
     monkeypatch.setattr("scholar_cite.search.search", lambda q, limit, no_browser: [])
     result = runner.invoke(cli.app, ["cite", "nothing here"])
     assert result.exit_code == cli.EXIT_NO_RESULTS
+
+
+# ---------- input validation regressions ----------
+
+
+def test_parse_formats_rejects_empty_string():
+    """Regression: --format '' used to silently yield [] and render empty output."""
+    import typer
+
+    with pytest.raises(typer.BadParameter, match="at least one"):
+        cli._parse_formats("")
+
+
+def test_parse_formats_rejects_only_commas():
+    import typer
+
+    with pytest.raises(typer.BadParameter, match="at least one"):
+        cli._parse_formats(",,,")
+    with pytest.raises(typer.BadParameter, match="at least one"):
+        cli._parse_formats("   ,  ,  ")
+
+
+def test_parse_formats_accepts_all_keyword():
+    assert cli._parse_formats("all") == list(cli.ALL_FORMATS)
+
+
+def test_parse_formats_accepts_single_and_multi():
+    assert cli._parse_formats("apa") == ["apa"]
+    assert cli._parse_formats("apa,mla, bibtex") == ["apa", "mla", "bibtex"]
+
+
+def test_cli_cite_rejects_empty_format_arg():
+    """End-to-end: an empty --format is an error before the search even runs."""
+    result = runner.invoke(cli.app, ["cite", "any title", "--format", ""])
+    assert result.exit_code != 0
+    output = (result.output or "") + (result.stderr or "")
+    assert "at least one" in output.lower() or "format" in output.lower()
+
+
+def test_cli_cite_rejects_zero_and_negative_limit():
+    """Regression: --limit -1 used to silently cut the last candidate.
+    Typer now rejects non-positive ints before we ever reach the slice."""
+    for bad in ("-1", "0", "-10"):
+        result = runner.invoke(cli.app, ["cite", "any title", "--limit", bad])
+        assert result.exit_code != 0, f"--limit {bad} should be rejected"
+
+
+def test_cli_cite_accepts_limit_one(monkeypatch):
+    """The smallest valid --limit still works."""
+    monkeypatch.setattr(cli, "_parse_formats", lambda _raw: ["apa"])
+
+    def fake_search(query, limit, no_browser):
+        assert limit == 1
+        p = Paper(cluster_id="x", title="T")
+        p.citations = CitationSet(apa="OK.")
+        return [p]
+
+    monkeypatch.setattr("scholar_cite.search.search", fake_search)
+    result = runner.invoke(cli.app, ["cite", "q", "--format", "apa", "--limit", "1"])
+    assert result.exit_code == cli.EXIT_OK

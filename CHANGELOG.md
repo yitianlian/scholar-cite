@@ -7,6 +7,18 @@ project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Fixed
+- **`--format` rejects empty input.** Previously `--format ""`, `--format ","`,
+  or `--format ",,,"` parsed to an empty list, the command ran "successfully",
+  and the output showed only the paper header with no citation content —
+  silent-wrong behaviour for scripts that accidentally interpolated an empty
+  string. `_parse_formats()` now raises `typer.BadParameter` when no valid
+  format name survives the split.
+- **`--limit` rejects non-positive values.** Previously `--limit -1` was passed
+  straight into `rank_papers(...)[:limit]`, which returns "all but the last N"
+  — completely unrelated to the flag's intended meaning. Typer now enforces
+  `min=1` at the CLI boundary, and the Python-level `search()` API raises
+  `ValueError` on any non-positive or non-integer `limit` so direct library
+  callers can't bypass the check either.
 - **Browser path no longer crashes on cite-popup HTTP 403.** The per-paper
   citation loop used to catch only `ScholarBlockedError`, but
   `BrowserFetcher.fetch()` raises a plain `RuntimeError("... returned HTTP 403")`

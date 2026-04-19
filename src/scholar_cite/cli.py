@@ -31,6 +31,11 @@ def _parse_formats(raw: str) -> list[str]:
     if raw == "all":
         return list(ALL_FORMATS)
     names = [n.strip().lower() for n in raw.split(",") if n.strip()]
+    if not names:
+        raise typer.BadParameter(
+            "--format must name at least one citation format. "
+            f"Got empty input. Options: {', '.join(ALL_FORMATS)}, or 'all'."
+        )
     unknown = [n for n in names if n not in ALL_FORMATS]
     if unknown:
         raise typer.BadParameter(f"Unknown format(s): {', '.join(unknown)}")
@@ -109,7 +114,13 @@ def cite(
         help="Comma-separated formats or 'all'. Options: mla, apa, chicago, harvard, "
         "vancouver, bibtex, endnote, refman, refworks.",
     ),
-    limit: int = typer.Option(10, "--limit", "-n", help="Max candidates to return."),
+    limit: int = typer.Option(
+        10,
+        "--limit",
+        "-n",
+        min=1,
+        help="Max candidates to return. Must be >= 1.",
+    ),
     as_json: bool = typer.Option(False, "--json", help="Output JSON."),
     output: str | None = typer.Option(None, "--output", "-o", help="Write output to file."),
     no_browser: bool = typer.Option(

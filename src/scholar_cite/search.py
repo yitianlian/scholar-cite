@@ -247,10 +247,18 @@ def search(query: str, limit: int = 10, no_browser: bool = False) -> list[Paper]
       results are recorded on each `Paper.citation_errors` and the caller can
       decide how strict to be.
 
+    Raises:
+        ValueError: if `limit < 1` — we slice with `[:limit]` internally, and
+            negative values would silently yield "all but the last N" results,
+            which is not what the caller meant.
+
     Real programming errors (parse bugs, type errors, etc.) are NEVER masked
     as "Scholar blocked us". Only exceptions that look like genuine Scholar
     refusals (403/429/MaxTries/captcha/timeout) are recorded as such.
     """
+    if not isinstance(limit, int) or isinstance(limit, bool) or limit < 1:
+        raise ValueError(f"limit must be a positive integer, got {limit!r}")
+
     if not no_browser:
         return _search_via_browser(query, limit)
 

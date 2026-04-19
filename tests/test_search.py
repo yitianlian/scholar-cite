@@ -139,3 +139,25 @@ def test_fill_paper_citations_catches_captcha_error(monkeypatch, dummy_paper):
     from scholar_cite.models import ALL_FORMATS
 
     assert set(dummy_paper.citation_errors.keys()) == set(ALL_FORMATS)
+
+
+# ---------- Python-API input validation ----------
+
+
+def test_search_rejects_non_positive_limit():
+    """Regression: search(..., limit=-1) used to silently fall through to
+    `rank_papers(...)[:limit]`, returning 'all but the last 1' papers —
+    clearly not what the caller wants. Reject at the public API boundary."""
+    import pytest
+
+    for bad in (-1, 0, -100):
+        with pytest.raises(ValueError, match="positive integer"):
+            search_mod.search("irrelevant", limit=bad)
+
+
+def test_search_rejects_non_int_limit():
+    import pytest
+
+    for bad in (1.5, "10", None, True):
+        with pytest.raises(ValueError, match="positive integer"):
+            search_mod.search("irrelevant", limit=bad)
