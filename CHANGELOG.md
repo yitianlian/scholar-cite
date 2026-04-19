@@ -44,6 +44,11 @@ project adheres to [Semantic Versioning](https://semver.org/).
   dependencies auto-installed, and what is Playwright / why is it required.
 - `.gitignore` now excludes `dist/`, `build/`, `wheels/`, `*.whl`, `*.tar.gz`
   so build artefacts don't accidentally get committed.
+- `.claude/skills/scholar-cite/` — a Claude Code skill that auto-discovers
+  when you open this repo in Claude Code. `SKILL.md` tells the agent when to
+  invoke the CLI, the common invocations, the captcha flow, a
+  troubleshooting table, and the exit-code contract. `flags.md` supplements
+  with the full flag reference and a Python-API snippet for batch workflows.
 
 ### Changed
 - Code formatted with `ruff format` and lint-clean under the new ruff ruleset

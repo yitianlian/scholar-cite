@@ -344,6 +344,7 @@ scholar-cite/
 | [`docs/design.md`](docs/design.md) | Original 14-section design specification (planning-era snapshot) |
 | [`docs/test-run-2026-04-19.md`](docs/test-run-2026-04-19.md) | First live 9-format pipeline run |
 | [`docs/e2e-verification.md`](docs/e2e-verification.md) | Post-fix E2E evidence + wheel install smoke test |
+| [`.claude/skills/scholar-cite/SKILL.md`](.claude/skills/scholar-cite/SKILL.md) | Claude Code skill — auto-discovered when you open this repo in Claude Code; teaches the agent when and how to call the CLI |
 | [`CHANGELOG.md`](CHANGELOG.md) | Release-level summary of what changed and why |
 
 ## License
