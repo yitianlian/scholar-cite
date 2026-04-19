@@ -1,9 +1,11 @@
 # scholar-cite
 
+[English](README.md) · [简体中文](README.zh-CN.md)
+
 > A Python CLI that searches **Google Scholar** by paper title and returns all nine citation formats — `BibTeX`, `EndNote`, `RefMan` (RIS), `RefWorks`, `MLA`, `APA`, `Chicago`, `Harvard`, `Vancouver`.
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
-[![Tests](https://img.shields.io/badge/tests-31%20passing-brightgreen.svg)](#running-the-tests)
+[![Tests](https://img.shields.io/badge/tests-48%20passing-brightgreen.svg)](#running-the-tests)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 **Status:** MVP. The nine formats are verified end-to-end against live Google
@@ -57,10 +59,9 @@ Python 3.10 or later is required (tested on 3.10 – 3.14).
 ### FAQ before you install
 
 **Can I just `pip install scholar-cite`?**
-Not yet — the repo is private and nothing has been published to PyPI. Install
-directly from the git repo (option A below) or from a locally-built wheel
-(option B). If/when this moves to PyPI the command will simply be
-`pipx install scholar-cite`.
+Not on PyPI yet (planned for v0.1.0). For now, install directly from the git
+repo (option A below) or from a locally-built wheel (option B). Once
+published, the command becomes `pipx install scholar-cite`.
 
 **Do I need an API key or token?**
 **No.** Google Scholar has no public API. The tool drives a real browser and
@@ -95,10 +96,6 @@ together.
 ### Option A — install from the git repo (recommended for now)
 
 ```bash
-# SSH (what `gh` uses by default)
-pipx install git+ssh://git@github.com/yitianlian/scholar-cite.git
-
-# …or HTTPS (needs a GitHub PAT with repo scope for a private repo)
 pipx install git+https://github.com/yitianlian/scholar-cite.git
 
 # Then, once per machine:
@@ -107,14 +104,15 @@ playwright install chromium
 
 `pipx` isolates scholar-cite into its own virtualenv and puts the
 `scholar-cite` binary on your `PATH`. If you prefer `pip`, replace `pipx`
-with `pip` and manage the venv yourself.
+with `pip` and manage the venv yourself. SSH (`git+ssh://git@github.com/...`)
+also works if you already have an SSH key set up for GitHub.
 
 ### Option B — build a wheel locally and install it
 
 Useful if you want a single `.whl` you can copy to other machines.
 
 ```bash
-git clone git@github.com:yitianlian/scholar-cite.git
+git clone https://github.com/yitianlian/scholar-cite.git
 cd scholar-cite
 pip install build
 python -m build                     # produces dist/scholar_cite-0.1.0-*.whl
@@ -126,7 +124,7 @@ playwright install chromium
 ### Option C — editable install for development
 
 ```bash
-git clone git@github.com:yitianlian/scholar-cite.git
+git clone https://github.com/yitianlian/scholar-cite.git
 cd scholar-cite
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"             # includes pytest + ruff
