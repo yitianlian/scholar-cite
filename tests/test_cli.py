@@ -197,6 +197,19 @@ def test_cli_cite_rejects_zero_and_negative_limit():
         assert result.exit_code != 0, f"--limit {bad} should be rejected"
 
 
+def test_cli_version_option_prints_version_and_exits_zero():
+    """Regression: `scholar-cite --version` must succeed (exit 0 + version on
+    stdout). The project's own skill file uses it as the availability probe,
+    so an error branch here looked like a broken install."""
+    from scholar_cite import __version__
+
+    for flag in ("--version", "-V"):
+        result = runner.invoke(cli.app, [flag])
+        assert result.exit_code == 0, f"{flag} exited {result.exit_code}"
+        assert __version__ in result.output
+        assert "scholar-cite" in result.output
+
+
 def test_cli_cite_accepts_limit_one(monkeypatch):
     """The smallest valid --limit still works."""
     monkeypatch.setattr(cli, "_parse_formats", lambda _raw: ["apa"])

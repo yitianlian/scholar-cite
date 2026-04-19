@@ -7,6 +7,16 @@ project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Fixed
+- **`scholar-cite --version` / `-V` now works.** `__version__ = "0.1.0"` was
+  defined in `src/scholar_cite/__init__.py` but not exposed to the CLI, so
+  `scholar-cite --version` reported `No such option: --version`. The repo's
+  own skill file (`.claude/skills/scholar-cite/SKILL.md`) documents
+  `scholar-cite --version` as the canonical availability probe, so the
+  missing option caused every install check to take the error branch on
+  first run. Wired via a Typer `@app.callback()` that runs `is_eager=True`
+  so `--version` short-circuits before any subcommand required-arg check.
+  The skill's `scholar-cite --version 2>/dev/null || scholar-cite --help |
+  head -3` fallback pattern is kept for robustness against older installs.
 - **`--format` rejects empty input.** Previously `--format ""`, `--format ","`,
   or `--format ",,,"` parsed to an empty list, the command ran "successfully",
   and the output showed only the paper header with no citation content —

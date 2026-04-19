@@ -7,6 +7,7 @@ import sys
 
 import typer
 
+from scholar_cite import __version__
 from scholar_cite.models import ALL_FORMATS, Paper
 
 app = typer.Typer(
@@ -14,6 +15,35 @@ app = typer.Typer(
     help="Fetch Google Scholar citation formats by paper title.",
     no_args_is_help=True,
 )
+
+
+def _version_callback(show: bool) -> None:
+    """Print the installed package version and exit.
+
+    The skill at `.claude/skills/scholar-cite/SKILL.md` documents
+    `scholar-cite --version` as the canonical availability probe, so this
+    needs to succeed cleanly (exit 0, version on stdout, nothing on stderr).
+    """
+    if show:
+        typer.echo(f"scholar-cite {__version__}")
+        raise typer.Exit()
+
+
+@app.callback()
+def _root(
+    version: bool = typer.Option(
+        False,
+        "--version",
+        "-V",
+        callback=_version_callback,
+        is_eager=True,
+        help="Show the installed scholar-cite version and exit.",
+    ),
+) -> None:
+    """Fetch Google Scholar citation formats by paper title."""
+    # Callback only exists to hang `--version` off the root app; Typer still
+    # dispatches to `cite` / `auth` subcommands below.
+
 
 auth_app = typer.Typer(
     help="Manage the cached browser cookies used for the Playwright fallback.",
