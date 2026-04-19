@@ -44,11 +44,18 @@ project adheres to [Semantic Versioning](https://semver.org/).
   dependencies auto-installed, and what is Playwright / why is it required.
 - `.gitignore` now excludes `dist/`, `build/`, `wheels/`, `*.whl`, `*.tar.gz`
   so build artefacts don't accidentally get committed.
-- `.claude/skills/scholar-cite/` — a Claude Code skill that auto-discovers
-  when you open this repo in Claude Code. `SKILL.md` tells the agent when to
-  invoke the CLI, the common invocations, the captcha flow, a
-  troubleshooting table, and the exit-code contract. `flags.md` supplements
-  with the full flag reference and a Python-API snippet for batch workflows.
+- `.claude/skills/scholar-cite/` — agent skill, auto-discovered by Claude
+  Code. `SKILL.md` tells the agent when to invoke the CLI, the common
+  invocations, the captcha flow, a troubleshooting table, and the
+  exit-code contract. `flags.md` supplements with the full flag reference
+  and a Python-API snippet for batch workflows.
+- `.agents/skills/scholar-cite` → symlink to the above, auto-discovered by
+  **OpenAI Codex CLI** from its `.agents/skills/<name>/SKILL.md` convention.
+  Single source of truth: both Claude Code and Codex CLI read the same
+  `SKILL.md` + `flags.md`.
+- README: new "Claude Code & Codex integration" section explaining both
+  auto-discovery paths, how to install the skill globally per-user via a
+  symlink, and what the skill actually teaches the agent.
 
 ### Changed
 - Code formatted with `ruff format` and lint-clean under the new ruff ruleset

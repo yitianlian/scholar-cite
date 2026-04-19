@@ -22,11 +22,12 @@ Scholar via a Playwright browser backend. See
 5. [How it works](#how-it-works)
 6. [Missing-format handling](#missing-format-handling)
 7. [Source-quality ranking](#source-quality-ranking)
-8. [What's implemented vs planned](#whats-implemented-vs-planned)
-9. [Running the tests](#running-the-tests)
-10. [Project layout](#project-layout)
-11. [Documentation index](#documentation-index)
-12. [License](#license)
+8. [Claude Code & Codex integration](#claude-code--codex-integration)
+9. [What's implemented vs planned](#whats-implemented-vs-planned)
+10. [Running the tests](#running-the-tests)
+11. [Project layout](#project-layout)
+12. [Documentation index](#documentation-index)
+13. [License](#license)
 
 ---
 
@@ -272,6 +273,70 @@ produced `@inproceedings{kaiming2016deep, ..., volume={34}}`. With ranking on,
 the same query lands on the clean cluster `he2016deep` from the official CVPR
 host. See `tests/test_ranking.py::test_rank_papers_handles_resnet_style_scenario`.
 
+## Claude Code & Codex integration
+
+This repo ships a ready-to-use agent skill so that **Claude Code** or
+**OpenAI Codex CLI** can call the `scholar-cite` CLI on your behalf when you
+ask for a citation, without you having to explain the tool every time.
+
+### Where the skill lives
+
+Both agent runtimes auto-discover project-scoped skills from their own
+directory. The content is identical, so the repo keeps a single source in
+`.claude/skills/` and symlinks it for Codex:
+
+```
+scholar-cite/
+├── .claude/
+│   └── skills/
+│       └── scholar-cite/
+│           ├── SKILL.md     ← the real file (Claude Code reads here)
+│           └── flags.md
+└── .agents/
+    └── skills/
+        └── scholar-cite  →  ../../.claude/skills/scholar-cite   (symlink)
+                           (Codex CLI reads here)
+```
+
+### How to "install" the skill
+
+Nothing to install. Both agents scan for skills when a session starts in
+this directory. Just clone the repo and open it in your agent of choice:
+
+| Agent | Skill root it looks at | What you do |
+| ----- | ---------------------- | ----------- |
+| Claude Code | `.claude/skills/<name>/SKILL.md` (project), `~/.claude/skills/<name>/SKILL.md` (user) | Open the repo in Claude Code. The skill is auto-discovered; it's listed in the available-skills section and Claude invokes it via the `Skill` tool when your request matches the description. |
+| Codex CLI | `.agents/skills/<name>/SKILL.md` (project), `~/.agents/skills/<name>/SKILL.md` (user) | Open the repo in Codex CLI (`codex` in this directory). Skills are scanned at session start and Codex also watches for changes at runtime. |
+
+**To make the skill globally available** (every project, not just this one):
+
+```bash
+# Claude Code
+ln -s "$PWD/.claude/skills/scholar-cite" "$HOME/.claude/skills/scholar-cite"
+
+# Codex CLI
+mkdir -p "$HOME/.agents/skills"
+ln -s "$PWD/.claude/skills/scholar-cite" "$HOME/.agents/skills/scholar-cite"
+```
+
+The CLI itself still needs to be on `PATH` — see the [Install](#install)
+section above.
+
+### What the skill tells the agent
+
+- When to invoke (trigger phrases in English and Chinese).
+- When *not* to use it (arXiv preprints → `arxiv` skill; headless CI → it
+  won't work; users asking for PDFs → this tool doesn't fetch PDFs).
+- The common invocations and their flags.
+- First-run captcha behaviour and the 5-minute wait.
+- A troubleshooting table for the six recurring failure modes.
+- The exit-code contract so the agent can branch correctly on failure.
+
+Read [`.claude/skills/scholar-cite/SKILL.md`](.claude/skills/scholar-cite/SKILL.md)
+(and [`flags.md`](.claude/skills/scholar-cite/flags.md) for the full flag
+reference and a Python-API snippet) to see exactly what the agent is
+taught.
+
 ## What's implemented vs planned
 
 | Feature                                                        | Status |
@@ -344,7 +409,8 @@ scholar-cite/
 | [`docs/design.md`](docs/design.md) | Original 14-section design specification (planning-era snapshot) |
 | [`docs/test-run-2026-04-19.md`](docs/test-run-2026-04-19.md) | First live 9-format pipeline run |
 | [`docs/e2e-verification.md`](docs/e2e-verification.md) | Post-fix E2E evidence + wheel install smoke test |
-| [`.claude/skills/scholar-cite/SKILL.md`](.claude/skills/scholar-cite/SKILL.md) | Claude Code skill — auto-discovered when you open this repo in Claude Code; teaches the agent when and how to call the CLI |
+| [`.claude/skills/scholar-cite/SKILL.md`](.claude/skills/scholar-cite/SKILL.md) | Agent skill — auto-discovered by Claude Code from `.claude/skills/` and by Codex CLI from `.agents/skills/` (symlinked to the same file); teaches the agent when and how to call the CLI |
+| [`.claude/skills/scholar-cite/flags.md`](.claude/skills/scholar-cite/flags.md) | Flag reference + Python API snippet referenced by the skill |
 | [`CHANGELOG.md`](CHANGELOG.md) | Release-level summary of what changed and why |
 
 ## License
