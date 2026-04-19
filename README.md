@@ -46,47 +46,101 @@ scholar-cite cite "Attention Is All You Need" --format bibtex
 
 ## Install
 
-Pick one of three options, then run `playwright install chromium` once (it
-downloads a ~150 MB browser binary the tool needs).
+Installing always takes **two steps**:
 
-### Option A — `pipx` (recommended, isolates the install)
+1. Install the Python package (pulls every Python dependency in automatically).
+2. Download the Chromium browser binary that Playwright drives (~150 MB, one-off).
+
+Python 3.10 or later is required (tested on 3.10 – 3.14).
+
+### FAQ before you install
+
+**Can I just `pip install scholar-cite`?**
+Not yet — the repo is private and nothing has been published to PyPI. Install
+directly from the git repo (option A below) or from a locally-built wheel
+(option B). If/when this moves to PyPI the command will simply be
+`pipx install scholar-cite`.
+
+**Do I need an API key or token?**
+**No.** Google Scholar has no public API. The tool drives a real browser and
+parses Scholar's own HTML; nothing authenticates. You may need to solve a
+captcha once in the visible browser window, after which cookies carry the
+session for days.
+
+**Do I have to install dependencies manually?**
+No. `pip` / `pipx` reads `pyproject.toml` and pulls in every Python dep
+automatically (`typer`, `scholarly`, `requests`, `beautifulsoup4`, `lxml`,
+`playwright`). The *only* manual step is step 2 — downloading the Chromium
+binary. `pip` can't ship 150 MB of browser inside a Python wheel, so Playwright
+exposes `playwright install chromium` to fetch it separately.
+
+**What is Playwright and why does scholar-cite need it?**
+[Playwright](https://playwright.dev/python/) is a Python library that drives a
+real Chromium browser programmatically. We use it because:
+- Google Scholar **403s plain HTTP requests** within a request or two, even
+  through the `scholarly` library.
+- Scholar **detects headless browsers** and shows a "please show you're not a
+  robot" page to them.
+- A real headful Chromium with light stealth patches (hide
+  `navigator.webdriver` etc.) reliably survives. When Scholar does show a
+  captcha, it appears in the visible window and you can click through it
+  once; cookies are cached at `~/.cache/scholar-cite/cookies.json` and reused
+  silently for subsequent runs.
+
+We do not use Selenium, pyppeteer, or plain `requests` for the main path.
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for how the pieces fit
+together.
+
+### Option A — install from the git repo (recommended for now)
 
 ```bash
-pipx install scholar-cite              # from PyPI (once published)
-# or, directly from the private git repo while it lives there:
+# SSH (what `gh` uses by default)
 pipx install git+ssh://git@github.com/yitianlian/scholar-cite.git
+
+# …or HTTPS (needs a GitHub PAT with repo scope for a private repo)
+pipx install git+https://github.com/yitianlian/scholar-cite.git
+
+# Then, once per machine:
 playwright install chromium
 ```
 
-### Option B — `pip install` from a wheel
+`pipx` isolates scholar-cite into its own virtualenv and puts the
+`scholar-cite` binary on your `PATH`. If you prefer `pip`, replace `pipx`
+with `pip` and manage the venv yourself.
+
+### Option B — build a wheel locally and install it
+
+Useful if you want a single `.whl` you can copy to other machines.
 
 ```bash
-# Build locally:
-git clone https://github.com/yitianlian/scholar-cite && cd scholar-cite
-python -m build                        # produces dist/scholar_cite-0.1.0-*.whl
+git clone git@github.com:yitianlian/scholar-cite.git
+cd scholar-cite
+pip install build
+python -m build                     # produces dist/scholar_cite-0.1.0-*.whl
 
-# Install the wheel into any Python 3.10+ environment:
-pip install dist/scholar_cite-0.1.0-py3-none-any.whl
+pipx install dist/scholar_cite-0.1.0-py3-none-any.whl
 playwright install chromium
 ```
 
 ### Option C — editable install for development
 
 ```bash
-git clone https://github.com/yitianlian/scholar-cite && cd scholar-cite
+git clone git@github.com:yitianlian/scholar-cite.git
+cd scholar-cite
 python3 -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev]"                # includes pytest + ruff
+pip install -e ".[dev]"             # includes pytest + ruff
 playwright install chromium
-pytest -q                              # 38 tests, no live Scholar calls
+pytest -q                           # 38 tests, all offline
 ```
 
-Python 3.10 or later is required (tested on 3.10 – 3.14).
+### First-run behaviour (all options)
 
-### First-run note (all options)
-
-The tool opens a visible Chromium window on first use. If Scholar asks "Please
-show you're not a robot", click through the challenge once. Cookies are cached
-at `~/.cache/scholar-cite/cookies.json` and silently reused for days afterwards.
+The first `scholar-cite cite "..."` call opens a visible Chromium window. If
+Scholar shows "Please show you're not a robot", click through the challenge
+once. The tool waits up to 5 minutes, harvests the resulting cookies to
+`~/.cache/scholar-cite/cookies.json`, and reuses them silently on later runs.
+Run `scholar-cite auth status` any time to see the cached cookie state, and
+`scholar-cite auth reset` to force a fresh login.
 
 ## Quick start
 

@@ -39,7 +39,9 @@ project adheres to [Semantic Versioning](https://semver.org/).
   including a wheel install smoke test in a clean venv.
 - README install section rewritten with three options (`pipx` from git,
   `pip install` from wheel, editable dev install) and a first-run captcha
-  note.
+  note. Added an explicit pre-install FAQ covering the four recurring
+  questions: can I just `pip install`, do I need an API key, are
+  dependencies auto-installed, and what is Playwright / why is it required.
 - `.gitignore` now excludes `dist/`, `build/`, `wheels/`, `*.whl`, `*.tar.gz`
   so build artefacts don't accidentally get committed.
 
