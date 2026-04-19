@@ -147,11 +147,38 @@ def fetch_citation_set(
             body = fetch(link.url, timeout=timeout)
             if _looks_like_captcha(body):
                 raise CaptchaError(f"Scholar captcha triggered on export {link.field}")
-            setattr(citations, link.field, body.strip())
+            cleaned = _clean_refworks(body) if link.field == "refworks" else body
+            setattr(citations, link.field, cleaned.strip())
         except Exception:  # noqa: BLE001 — per-format failure shouldn't kill the paper.
             continue
 
     return citations
+
+
+_REFWORKS_REDIRECT_RE = re.compile(
+    r"""location\.replace\(['"]([^'"]+)['"]\)""", re.IGNORECASE
+)
+
+
+def _clean_refworks(body: str) -> str:
+    """Scholar's 'RefWorks' export is a redirect stub to refworks.com — not a citation.
+
+    If we recognise the redirect, return a minimal, useful payload: a one-line
+    comment + the target URL. Users who have a RefWorks account can paste that
+    URL into a logged-in browser to import the citation.
+    """
+    if "refworks.com" not in body:
+        return body
+    m = _REFWORKS_REDIRECT_RE.search(body)
+    if not m:
+        return body
+    url = (
+        m.group(1)
+        .replace(r"\x3d", "=")
+        .replace(r"\x26", "&")
+        .replace(r"\x2f", "/")
+    )
+    return f"# Google Scholar's RefWorks export is an external redirect.\n# Import URL:\n{url}"
 
 
 _CLUSTER_ID_RE = re.compile(r"info:([^:]+):scholar\.google\.com")

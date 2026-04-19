@@ -2,7 +2,7 @@
 
 A Python CLI that searches **Google Scholar** by paper title and returns the 9 citation formats (MLA, APA, Chicago, Harvard, Vancouver, BibTeX, EndNote, RefMan, RefWorks).
 
-> **Status**: MVP — search + text-format extraction verified against live Google Scholar for a real paper (see [`docs/test-run-2026-04-19.md`](docs/test-run-2026-04-19.md)). Export formats covered by parser unit tests; live verification pending the captcha-recovery flow. Full design in [`docs/design.md`](docs/design.md).
+> **Status**: MVP — **all 9 formats verified end-to-end via the Playwright browser path** ([`docs/test-run-2026-04-19.md`](docs/test-run-2026-04-19.md)). Plain-HTTP path (`scholarly`) works intermittently and auto-falls-back to the browser when blocked. Full design in [`docs/design.md`](docs/design.md).
 
 ## Install (dev)
 
@@ -12,6 +12,7 @@ cd scholar-cite
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e .
+playwright install chromium   # ~150MB, one-time
 ```
 
 Python 3.10+ required (tested on 3.14).
@@ -19,37 +20,68 @@ Python 3.10+ required (tested on 3.14).
 ## Usage
 
 ```bash
-# Single title → BibTeX on stdout (default)
-scholar-cite "Attention Is All You Need"
+# Single title → BibTeX on stdout (default, tries plain HTTP, falls back to browser)
+scholar-cite cite "Attention Is All You Need"
 
-# All 9 formats
-scholar-cite "Attention Is All You Need" --format all
+# All 9 formats, via the headful browser (most reliable)
+scholar-cite cite "Attention Is All You Need" --format all --browser
 
-# Specific subset (comma-separated)
-scholar-cite "Attention Is All You Need" --format apa,mla,bibtex
+# Specific subset
+scholar-cite cite "Attention Is All You Need" --format apa,mla,bibtex
 
 # Cap candidates
-scholar-cite "Attention Is All You Need" --limit 3
+scholar-cite cite "Attention Is All You Need" --limit 3
 
 # JSON output (for scripting)
-scholar-cite "Attention Is All You Need" --format all --json
+scholar-cite cite "Attention Is All You Need" --format all --json --browser
 
 # Write to file
-scholar-cite "Attention Is All You Need" --format bibtex -o refs.bib
+scholar-cite cite "Attention Is All You Need" --format bibtex -o refs.bib --browser
+
+# Manage the browser cookie cache
+scholar-cite auth status
+scholar-cite auth reset
 ```
+
+### First run with `--browser`
+
+A Chromium window pops up. If Scholar shows "Please show you're not a robot",
+click through the challenge — the tool waits up to 5 minutes. Cookies are cached
+at `~/.cache/scholar-cite/cookies.json` and reused on subsequent runs, so you
+shouldn't see the challenge again for days.
 
 ## Example output
 
+Running `scholar-cite cite "Attention Is All You Need" --format all --limit 1 --browser`:
+
 ```
 [1] Attention is all you need
-    A Vaswani — 2017 — Advances in neural …
+    A Vaswani — proceedings.neurips.cc
     cluster_id: 5Gohgn6QFikJ
     ──────────────────────────────────────────────────
-    MLA:     Vaswani, Ashish, et al. "Attention is all you need." ...
-    APA:     Vaswani, A., Shazeer, N., ... (2017). Attention is all you need. ...
-    Chicago: ...
-    Harvard: ...
-    Vancouver: ...
+    MLA:       Vaswani, Ashish, et al. "Attention is all you need." Advances ...
+    APA:       Vaswani, A., Shazeer, N., Parmar, N., ... (2017). Attention is ...
+    Chicago:   Vaswani, Ashish, Noam Shazeer, Niki Parmar, ... "Attention is ...
+    Harvard:   Vaswani, A., Shazeer, N., Parmar, N., ... 2017. Attention is ...
+    Vancouver: Vaswani A, Shazeer N, Parmar N, ... Attention is all you need ...
+    Bibtex:
+        @article{vaswani2017attention,
+          title={Attention is all you need},
+          author={Vaswani, Ashish and Shazeer, Noam and ...},
+          ...
+        }
+    Endnote:
+        %0 Journal Article
+        %T Attention is all you need
+        ...
+    Refman:
+        TY  - JOUR
+        T1  - Attention is all you need
+        ...
+    Refworks:
+        # Google Scholar's RefWorks export is an external redirect.
+        # Import URL:
+        http://www.refworks.com/express?sid=google&...
 ```
 
 ## Key design decisions
@@ -64,16 +96,18 @@ scholar-cite "Attention Is All You Need" --format bibtex -o refs.bib
 
 | Feature | Status |
 |---------|--------|
-| Scholar search | ✅ working |
-| `cluster_id` extraction | ✅ working |
-| Cite-popup HTML fetch & parse | ✅ working (5 text formats verified live) |
-| Export-link parsing (BibTeX/EndNote/RefMan/RefWorks) | ✅ parser unit-tested; live fetch blocked by Scholar on first run |
-| CLI (plain + JSON output, `--format`, `--limit`, `-o`) | ✅ |
+| Scholar search (scholarly + browser fallback) | ✅ working |
+| `cluster_id` extraction (scholarly + browser) | ✅ working |
+| Cite-popup HTML fetch & parse (5 text formats) | ✅ working live |
+| Export formats (BibTeX / EndNote / RefMan / RefWorks) via `--browser` | ✅ **all 9 formats verified live** |
+| Playwright browser backend with cookie persistence | ✅ working |
+| Captcha: manual-solve once, cookies cached | ✅ working |
+| `auth status` / `auth reset` subcommands | ✅ working |
+| CLI (`cite`, plain + JSON output, `--format`, `--limit`, `-o`, `--browser`) | ✅ |
 | Batch mode (`-f titles.txt`) | ⏳ planned |
 | Interactive picker (`-i`) | ⏳ planned |
 | Clipboard (`-c`) | ⏳ planned |
-| SQLite cache | ⏳ planned |
-| Playwright captcha recovery | ⏳ planned |
+| SQLite cache keyed by `cluster_id` | ⏳ planned |
 | SerpAPI fallback backend | ⏳ planned |
 
 ## Testing
@@ -86,8 +120,12 @@ All parsing/fetching logic is covered by unit tests using a saved cite-popup HTM
 
 ## Known limitations (current MVP)
 
-- Google Scholar aggressively rate-limits. A run of more than a couple of papers will likely hit 403 / `MaxTriesExceeded`. The captcha-recovery flow and SerpAPI fallback (both in the design doc) address this.
-- The `--limit` flag currently caps Scholar's first result page. No pagination yet.
+- **RefWorks isn't a citation string** — Scholar's RefWorks export is a redirect to
+  `refworks.com/express`. The tool emits that URL instead; open it in a browser
+  logged into RefWorks to complete the import.
+- **Scholar rate-limits plain HTTP aggressively**. Use `--browser` for reliable runs;
+  the default tries the scholarly path first and falls back to the browser when blocked.
+- **`--limit` caps the first result page** (typically ≤10). No pagination yet.
 
 ## Project layout
 
@@ -97,9 +135,10 @@ scholar-cite/
 │   ├── design.md              # full design spec
 │   └── test-run-2026-04-19.md # first live test results
 ├── src/scholar_cite/
-│   ├── cli.py                 # Typer entry point
-│   ├── search.py              # search orchestration
-│   ├── citation.py            # cite-popup parser + export fetching
+│   ├── cli.py                 # Typer entry point (cite, auth status, auth reset)
+│   ├── search.py              # scholarly path + browser fallback orchestration
+│   ├── citation.py            # cite-popup parser + 9-format assembly
+│   ├── browser_fetcher.py     # Playwright headful browser w/ cookie persistence
 │   ├── models.py              # Paper, CitationSet dataclasses
 │   └── __main__.py
 ├── tests/
