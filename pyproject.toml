@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "scholar-cite"
-version = "0.1.1"
+version = "0.1.2"
 description = "CLI that fetches all 9 Google Scholar citation formats (BibTeX / EndNote / RefMan / RefWorks / MLA / APA / Chicago / Harvard / Vancouver) for a paper title."
 readme = "README.md"
 requires-python = ">=3.10"

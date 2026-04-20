@@ -6,7 +6,25 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-_Nothing yet since v0.1.1._
+_Nothing yet since v0.1.2._
+
+## [0.1.2] — 2026-04-20
+
+Docs + badges refresh (no code changes).
+
+### Added
+- `docs/e2e-verification.md` gains a "2026-04-20 — v0.1.1 post-release E2E"
+  section: multi-domain live sweep (CS/AI, Physics, Biology, Econ) plus a
+  4-test CLI flag sweep, both against the PyPI-installed v0.1.1 binary.
+  Every query produced 9/9 formats and landed on a tier-1 host. First
+  `@book{…}` entry observed in testing (Piketty).
+- README adds live PyPI version + supported-Python badges sourced from the
+  official `pypi.org` shields, so the badges update automatically when a
+  new release lands. Removed the hand-maintained Python version badge.
+
+### Fixed (docs only)
+- Test-count badge bumped from "48 passing" to "49 passing" to reflect the
+  navigation-race regression test added in v0.1.1.
 
 ## [0.1.1] — 2026-04-20
 

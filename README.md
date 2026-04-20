@@ -4,8 +4,9 @@
 
 > A Python CLI that searches **Google Scholar** by paper title and returns all nine citation formats — `BibTeX`, `EndNote`, `RefMan` (RIS), `RefWorks`, `MLA`, `APA`, `Chicago`, `Harvard`, `Vancouver`.
 
-[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
-[![Tests](https://img.shields.io/badge/tests-48%20passing-brightgreen.svg)](#running-the-tests)
+[![PyPI version](https://img.shields.io/pypi/v/scholar-cite.svg)](https://pypi.org/project/scholar-cite/)
+[![Python 3.10+](https://img.shields.io/pypi/pyversions/scholar-cite.svg)](https://pypi.org/project/scholar-cite/)
+[![Tests](https://img.shields.io/badge/tests-49%20passing-brightgreen.svg)](#running-the-tests)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 **Status:** MVP. The nine formats are verified end-to-end against live Google

@@ -4,8 +4,9 @@
 
 > 一个 Python CLI，给定论文标题，从 **Google Scholar** 抓取全部 9 种引用格式 —— `BibTeX`、`EndNote`、`RefMan`（RIS）、`RefWorks`、`MLA`、`APA`、`Chicago`、`Harvard`、`Vancouver`。
 
-[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
-[![Tests](https://img.shields.io/badge/tests-48%20passing-brightgreen.svg)](#运行测试)
+[![PyPI version](https://img.shields.io/pypi/v/scholar-cite.svg)](https://pypi.org/project/scholar-cite/)
+[![Python 3.10+](https://img.shields.io/pypi/pyversions/scholar-cite.svg)](https://pypi.org/project/scholar-cite/)
+[![Tests](https://img.shields.io/badge/tests-49%20passing-brightgreen.svg)](#运行测试)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 **状态**：MVP。9 种格式在真实 Google Scholar 上端到端验证通过（见
