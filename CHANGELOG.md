@@ -6,7 +6,42 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-_Nothing yet since v0.1.0._
+_Nothing yet since v0.1.1._
+
+## [0.1.1] — 2026-04-20
+
+Patch release. Ships to PyPI automatically via GitHub Actions + Trusted
+Publishing when the `v0.1.1` tag is pushed.
+
+### Fixed
+- **Playwright navigation race no longer crashes `fetch()`.** Surfaced while
+  dog-fooding v0.1.0 to generate BibTeX for five classic ML papers —
+  Scholar's anti-bot interstitial auto-redirects, so `page.content()` races
+  against the navigation and raises:
+
+      playwright._impl._errors.Error: Page.content: Unable to retrieve
+      content because the page is navigating and changing the content.
+
+  Two code paths were exposed:
+
+  1. The initial content read right after `page.goto(url)`. Now wrapped in
+     `try/except` that falls back to `response.text()` — enough for the
+     anti-bot detector to fire and hand control to the poll loop.
+  2. The poll loop waiting for the user to clear Scholar's challenge.
+     Previously the exception escaped and killed the whole search; now it's
+     swallowed and the loop retries on the next 2 s tick.
+
+  New test
+  `tests/test_browser_fetcher.py::test_fetch_survives_playwright_navigation_race`
+  exercises both sites with a `_FakePage` scheduled to raise mid-navigation
+  during both the initial read and several poll ticks. 49 tests total, up
+  from 48.
+
+### Added
+- `examples/classic_five.bib` — real BibTeX for Attention / ResNet / YOLO /
+  AlexNet / GAN, captured by running the fixed `demo_five_papers.py`
+  end-to-end against live Scholar. Useful as a reference and as an evidence
+  checkpoint that ranking put the clean `he2016deep` ResNet cluster first.
 
 ## [0.1.0] — 2026-04-19
 
