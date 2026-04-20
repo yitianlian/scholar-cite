@@ -119,6 +119,56 @@ Wheel includes every module under `scholar_cite/`, the MIT `LICENSE` (under
 `scholar-cite` console script. The sdist additionally carries `docs/`,
 `examples/`, `tests/`, `CHANGELOG.md`, and the bare `pyproject.toml`.
 
+## 2026-04-20 — v0.1.1 post-release E2E
+
+Ran two broader live passes against the `pipx install scholar-cite==0.1.1`
+binary (fresh venv, no dev paths on `sys.path`).
+
+### Multi-domain sweep (`/tmp/e2e_broad.py`)
+
+5 queries, one browser session, diverse fields. All 9 formats populated
+for every paper. Top cluster landed on a tier-1 host every time.
+
+| Domain | Query | Top cluster source host | BibTeX cite key |
+| ------ | ----- | ----------------------- | ---------------- |
+| CS/AI | "BERT Pre-training Deep Bidirectional Transformers Devlin" | `aclanthology.org` | `devlin2019bert` |
+| CS/AI | "GPT-3 Language Models Few-Shot Brown" | `proceedings.neurips.cc` | `brown2020language` |
+| Physics | "Observation of Gravitational Waves from a Binary Black Hole Merger" | `link.springer.com` | `tutukov2017formation` *(Scholar picked an adjacent review over the exact LIGO paper)* |
+| Biology | "A programmable dual-RNA-guided DNA endonuclease Jinek" | `www.science.org` | `jinek2012programmable` |
+| Econ | "Capital in the Twenty-First Century Piketty" | `www.degruyterbrill.com` | `piketty2014capital` |
+
+Notes:
+- First `@book{…}` entry we've seen in testing (Piketty). Tool handles
+  book-type citations without code changes.
+- Piketty's `year: 2014` extracted cleanly — the gs_a parser copes when
+  the venue line has a date.
+- Tier-1 hosts recognised by the ranking table: `aclanthology.org`,
+  `proceedings.neurips.cc`, `link.springer.com`, `www.science.org`.
+  `www.degruyterbrill.com` is not in the table and ranked at score 0;
+  still made it to the top because Scholar returned it first and nothing
+  trusted competed.
+
+### CLI flag sweep
+
+Four targeted invocations of the installed `scholar-cite` binary:
+
+| Test | Observation |
+| ---- | ----------- |
+| `--limit 3` on ResNet | Three clean CVPR clusters; `LrPNPdmMzoAJ` (the official ResNet cluster) first. The infamous `sandbox.getindico.io` cluster did not make the top 3 — pushed out by tier-1 hosts. |
+| `--format mla,bibtex` subset | Parser correctly emits only the two requested formats; other seven fields present in the `Paper.citations` dict but not rendered. |
+| `--json --strict --format all` on a query where Scholar returns 9/9 | Exit 0, full JSON payload, no `citation_errors` field (matches the schema). |
+| Empty query `""` | Scholar returns 0 hits → `EXIT_NO_RESULTS=2`. (Consider also rejecting empty queries at the CLI boundary in a future pass, similar to `--format ""`.) |
+
+### UX observation (not a bug)
+
+`--limit 1` trusts Scholar's top match. For well-known papers with
+*distinctive* titles ("Attention Is All You Need", "BERT: Pre-training…"),
+that's enough. For *generic* titles ("ImageNet Classification …", "Adam
+stochastic optimization …"), Scholar sometimes surfaces an adjacent paper
+first. `scholar-cite` returns correct citations for whatever Scholar
+returns — the user should widen to `--limit 3` / `--limit 5` and pick from
+the candidate list when the title is generic.
+
 ## Known cosmetic issues (not blockers)
 
 The citation *content* is always correct, but the top-level `Paper` metadata
