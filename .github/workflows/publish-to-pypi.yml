@@ -1,0 +1,74 @@
+name: Publish to PyPI
+
+# Publishes the project to PyPI via PyPI Trusted Publishing (OIDC).
+# No API tokens are stored anywhere — PyPI trusts *this exact workflow file
+# in this exact repo* via the "Pending Publisher" config described in
+# PUBLISHING.md.
+#
+# Triggers:
+#   - Pushing a tag that matches `v*` (e.g. `git push origin v0.1.1`)
+#     → builds and publishes automatically.
+#   - `workflow_dispatch` from the Actions UI (or `gh workflow run …`)
+#     → lets you publish an already-existing tag (useful for v0.1.0, which
+#     was pushed before this workflow existed).
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Tag or ref to build from (e.g. v0.1.0). Defaults to the ref this run is dispatched against."
+        required: false
+        default: ""
+
+jobs:
+  build:
+    name: Build sdist + wheel
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref || github.ref }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build
+        run: |
+          python -m pip install --upgrade pip build twine
+          python -m build
+          twine check dist/*
+
+      - name: Upload artefacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+
+  publish:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+
+    # Trusted Publishing requires this token permission.
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Download artefacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
+          # Use default index: https://upload.pypi.org/legacy/

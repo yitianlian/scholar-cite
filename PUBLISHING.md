@@ -1,10 +1,72 @@
 # Publishing to PyPI
 
-One-time setup, then three commands per release. Every release is also
-mirrored as a GitHub release tagged `vX.Y.Z` with the wheel + sdist
-attached — `gh release create` handles that automatically.
+Two supported paths:
 
-## One-time setup
+1. **Trusted Publishing via GitHub Actions (recommended)** — no API tokens
+   anywhere, PyPI authenticates the GitHub Actions workflow via OIDC. Setup
+   is a single form on PyPI. Release is a tag push. See
+   [Trusted Publishing setup](#trusted-publishing-setup) below.
+2. **Manual `twine upload` from your laptop** — covered further down. Good
+   fallback if GitHub Actions is unavailable.
+
+## Trusted Publishing setup
+
+One-time PyPI configuration. No tokens, no `~/.pypirc`, no secrets shared
+anywhere — PyPI trusts **this exact workflow file in this exact repo**.
+
+### 1. Register the PyPI account (once per person)
+
+https://pypi.org/account/register/ → enable 2FA.
+
+### 2. Add a "Pending publisher" for this repo
+
+Because the `scholar-cite` project doesn't exist on PyPI yet, you register
+it as a pending publisher. Go to:
+
+https://pypi.org/manage/account/publishing/
+
+Scroll to **"Add a new pending publisher"** and fill in exactly:
+
+| Field | Value |
+| ----- | ----- |
+| PyPI Project Name | `scholar-cite` |
+| Owner | `yitianlian` |
+| Repository name | `scholar-cite` |
+| Workflow name | `publish-to-pypi.yml` |
+| Environment name | *(leave blank)* |
+
+Submit. Nothing else to configure.
+
+### 3. Publish v0.1.0 (one-off, because the tag already exists)
+
+The workflow was added after v0.1.0 was tagged, so the `on: push: tags`
+trigger missed the train. Dispatch it manually once:
+
+```bash
+gh workflow run publish-to-pypi.yml --ref v0.1.0 -F ref=v0.1.0
+gh run watch                                   # optional: tail the live log
+```
+
+Check https://pypi.org/project/scholar-cite/ — it should appear within
+~30 s of the workflow's "Publish" step finishing.
+
+### 4. Future releases
+
+Just tag + push. The workflow triggers automatically:
+
+```bash
+# bump version in src/scholar_cite/__init__.py and pyproject.toml,
+# update CHANGELOG, commit that.
+git tag -a v0.1.1 -m "scholar-cite v0.1.1"
+git push origin v0.1.1      # ← this triggers publish-to-pypi.yml
+```
+
+## Manual fallback (no GitHub Actions)
+
+Use this path if you need to publish from a laptop without GitHub Actions
+(e.g. Actions is down, or you're releasing a hotfix from a personal fork).
+
+### One-time setup
 
 ### 1. Register the accounts
 
