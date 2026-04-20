@@ -155,12 +155,18 @@ class BrowserFetcher:
 
         # `response.text()` gives raw bytes as sent by the server, which is what we want for
         # the text/plain export endpoints. For an HTML page, we prefer the rendered DOM so
-        # stealth/init scripts have applied.
-        body = (
-            self._page.content()
-            if "text/html" in (response.headers.get("content-type") or "").lower()
-            else response.text()
-        )
+        # stealth/init scripts have applied — but the page may be mid-navigation right at
+        # this moment (especially on Scholar's anti-bot interstitial, which auto-redirects),
+        # and `page.content()` raises on that race. Fall back to `response.text()` so the
+        # caller always gets *something* to reason about.
+        is_html = "text/html" in (response.headers.get("content-type") or "").lower()
+        if is_html:
+            try:
+                body = self._page.content()
+            except Exception:
+                body = response.text()
+        else:
+            body = response.text()
 
         # Handle anti-bot / captcha interstitial
         if _page_is_antibot(body):
@@ -173,7 +179,14 @@ class BrowserFetcher:
             deadline = time.time() + self._captcha_wait
             while time.time() < deadline:
                 time.sleep(2.0)
-                current = self._page.content()
+                # Mid-poll the page is often mid-navigation (user clicking the
+                # challenge triggers redirects), which races `content()` and
+                # raises "Unable to retrieve content because the page is
+                # navigating". That's transient — skip this tick and retry.
+                try:
+                    current = self._page.content()
+                except Exception:
+                    continue
                 if not _page_is_antibot(current) and any(m in current for m in success_markers):
                     body = current
                     print("[browser] Challenge solved. Continuing.")
