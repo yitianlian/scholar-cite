@@ -55,7 +55,7 @@ scholar-cite cite "Attention Is All You Need" --format bibtex
 ### 安装前 FAQ
 
 **能直接 `pip install scholar-cite` 吗？**
-暂时不行（计划 v0.1.0 发到 PyPI）。现在请从下面选项 A 的 git 仓库直装，或选项 B 的本地 wheel。等发到 PyPI 之后直接 `pipx install scholar-cite` 就行。
+**可以** —— 从 v0.1.0 起已经发到 PyPI：<https://pypi.org/project/scholar-cite/>。见下面选项 A。
 
 **要 API key 或 token 吗？**
 **不要。** Google Scholar 没有公开 API，本工具驱动真浏览器解析 Scholar 自己的 HTML，不走任何认证。首次运行时浏览器窗口里如果弹验证码，你手动点一下就行，cookies 会持久化到本地，之后几天都不会再问。
@@ -71,14 +71,16 @@ scholar-cite cite "Attention Is All You Need" --format bibtex
 
 我们**不**用 Selenium、pyppeteer、纯 `requests`。实现细节见 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)。
 
-### 选项 A：从 git 仓库直装（当前推荐）
+### 选项 A：从 PyPI 装（推荐）
 
 ```bash
-pipx install git+https://github.com/yitianlian/scholar-cite.git
+pipx install scholar-cite
 playwright install chromium
 ```
 
 `pipx` 会把 scholar-cite 隔离在独立 virtualenv 里，把 `scholar-cite` 可执行文件加到 `PATH`。偏好 `pip` 的话把 `pipx` 换成 `pip` 自己管 venv 也行。
+
+想追 `main` 分支的最新代码（而不是 PyPI 最新发布），用 `pipx install git+https://github.com/yitianlian/scholar-cite.git`。
 
 ### 选项 B：本地 build wheel 再装
 

@@ -41,7 +41,7 @@ If that errors, the user needs to install it. Point them at the `Install`
 section of `README.md` (this repo). Two steps total:
 
 ```bash
-pipx install git+https://github.com/yitianlian/scholar-cite.git
+pipx install scholar-cite
 playwright install chromium
 ```
 

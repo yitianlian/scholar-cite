@@ -16,6 +16,10 @@ personal path leaks). Available at
 https://github.com/yitianlian/scholar-cite; wheel + sdist attached to the
 [v0.1.0 GitHub release](https://github.com/yitianlian/scholar-cite/releases/tag/v0.1.0).
 
+Published to PyPI via GitHub Actions + Trusted Publishing (OIDC, no API
+tokens stored anywhere): <https://pypi.org/project/scholar-cite/>.
+`pipx install scholar-cite` now works worldwide.
+
 ### Fixed
 - **`scholar-cite --version` / `-V` now works.** `__version__ = "0.1.0"` was
   defined in `src/scholar_cite/__init__.py` but not exposed to the CLI, so

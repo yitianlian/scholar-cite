@@ -59,9 +59,8 @@ Python 3.10 or later is required (tested on 3.10 – 3.14).
 ### FAQ before you install
 
 **Can I just `pip install scholar-cite`?**
-Not on PyPI yet (planned for v0.1.0). For now, install directly from the git
-repo (option A below) or from a locally-built wheel (option B). Once
-published, the command becomes `pipx install scholar-cite`.
+Yes — `scholar-cite` is on PyPI as of v0.1.0:
+<https://pypi.org/project/scholar-cite/>. That's option A below.
 
 **Do I need an API key or token?**
 **No.** Google Scholar has no public API. The tool drives a real browser and
@@ -93,19 +92,19 @@ We do not use Selenium, pyppeteer, or plain `requests` for the main path.
 See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for how the pieces fit
 together.
 
-### Option A — install from the git repo (recommended for now)
+### Option A — install from PyPI (recommended)
 
 ```bash
-pipx install git+https://github.com/yitianlian/scholar-cite.git
-
-# Then, once per machine:
+pipx install scholar-cite
 playwright install chromium
 ```
 
 `pipx` isolates scholar-cite into its own virtualenv and puts the
-`scholar-cite` binary on your `PATH`. If you prefer `pip`, replace `pipx`
-with `pip` and manage the venv yourself. SSH (`git+ssh://git@github.com/...`)
-also works if you already have an SSH key set up for GitHub.
+`scholar-cite` binary on your `PATH`. Plain `pip install scholar-cite`
+works too; you manage the venv yourself.
+
+To track the bleeding edge on `main` instead of the latest PyPI release,
+use `pipx install git+https://github.com/yitianlian/scholar-cite.git`.
 
 ### Option B — build a wheel locally and install it
 
